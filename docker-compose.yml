@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: chromacore-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: chromacore
+      POSTGRES_USER: chromacore
+      POSTGRES_PASSWORD: chromacore
+    ports:
+      - "5432:5432"
+    volumes:
+      - chromacore_pgdata:/var/lib/postgresql/data
+
+volumes:
+  chromacore_pgdata:
