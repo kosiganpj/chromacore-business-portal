@@ -1,3 +1,4 @@
+
 package com.chromacore.portal.security;
 
 import org.springframework.context.annotation.Bean;
@@ -15,6 +16,7 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 
 import org.springframework.web.cors.CorsConfiguration;
@@ -85,23 +87,29 @@ public class SecurityConfig {
                 .hasRole("CUSTOMER")
 
                 // Order creation is customer-only
-                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/orders")
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/api/orders"
+                )
                 .hasRole("CUSTOMER")
 
                 // Viewing all orders is admin-only
-                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/orders")
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/orders"
+                )
                 .hasRole("ADMIN")
 
                 // Changing order status is admin-only
                 .requestMatchers(
-                    org.springframework.http.HttpMethod.PUT,
+                    HttpMethod.PUT,
                     "/api/orders/*/status"
                 )
                 .hasRole("ADMIN")
 
                 // Deleting orders is admin-only
                 .requestMatchers(
-                    org.springframework.http.HttpMethod.DELETE,
+                    HttpMethod.DELETE,
                     "/api/orders/*"
                 )
                 .hasRole("ADMIN")
@@ -141,7 +149,10 @@ public class SecurityConfig {
         CorsConfiguration c = new CorsConfiguration();
 
         c.setAllowedOrigins(
-            List.of("http://localhost:5173")
+            List.of(
+                "http://localhost:5173",
+                "https://chromacore-business-portal-frontend.onrender.com"
+            )
         );
 
         c.setAllowedMethods(
