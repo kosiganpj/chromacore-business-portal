@@ -1,6 +1,8 @@
 import axios from 'axios'
 
-const api = axios.create({ baseURL: 'http://localhost:8080/api' })
+const api = axios.create({
+  baseURL: 'https://chromacore-business-portal-1.onrender.com/api'
+})
 
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('cc_token')
