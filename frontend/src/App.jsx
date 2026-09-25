@@ -1,8 +1,9 @@
-import React, {useEffect, useState} from 'react'
-import {Routes, Route, Link, useNavigate} from 'react-router-dom'
+
+import React, { useEffect, useState } from 'react'
+import { Routes, Route, Link, useNavigate } from 'react-router-dom'
 import api from './api'
 
-function Nav(){
+function Nav() {
   const token = localStorage.getItem('cc_token')
   const role = localStorage.getItem('cc_role')
   const nav = useNavigate()
@@ -15,12 +16,17 @@ function Nav(){
   return (
     <nav>
       <Link className="brand" to="/">ChromaCore</Link>
+
       <div className="navlinks">
         <Link to="/products">Products</Link>
         <Link to="/shades">Shade Cards</Link>
 
         {!token && <Link to="/login">Login</Link>}
-        {!token && <Link className="button" to="/register">Register</Link>}
+        {!token && (
+          <Link className="button" to="/register">
+            Register
+          </Link>
+        )}
 
         {token && role === 'CUSTOMER' && (
           <Link to="/customer">Dashboard</Link>
@@ -40,11 +46,13 @@ function Nav(){
   )
 }
 
-function Home(){
+function Home() {
   return (
     <main className="hero">
       <div>
-        <span className="eyebrow">DYES • CHEMICALS • B2B SUPPLY</span>
+        <span className="eyebrow">
+          DYES • CHEMICALS • B2B SUPPLY
+        </span>
 
         <h1>ChromaCore Dyes & Chemicals</h1>
 
@@ -67,26 +75,44 @@ function Home(){
   )
 }
 
-function Products(){
+function Products() {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    api.get('/products/public')
-      .then(r => {
-        console.log('Products API:', r.data)
-        setProducts(r.data)
-      })
-      .catch(e => {
+    let active = true
+
+    const fetchProducts = async () => {
+      try {
+        const r = await api.get('/products/public')
+
+        if (active) {
+          console.log('Products API:', r.data)
+          setProducts(r.data)
+        }
+      } catch (e) {
         console.error('Products API error:', e)
-        setError(
-          e.response?.data?.message ||
-          e.message ||
-          'Failed to load products'
-        )
-      })
-      .finally(() => setLoading(false))
+
+        if (active) {
+          setError(
+            e.response?.data?.message ||
+            e.message ||
+            'Failed to load products'
+          )
+        }
+      } finally {
+        if (active) {
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchProducts()
+
+    return () => {
+      active = false
+    }
   }, [])
 
   return (
@@ -108,7 +134,6 @@ function Products(){
       <div className="grid">
         {products.map(p => (
           <div className="card" key={p.id}>
-
             <div className="productimg">
               {p.imageUrl ? (
                 <img src={p.imageUrl} alt={p.name} />
@@ -127,10 +152,11 @@ function Products(){
               {p.description || 'B2B dye/chemical product.'}
             </p>
 
-            <span className={`status ${p.status.toLowerCase()}`}>
-              {p.status.replace('_', ' ')}
+            <span
+              className={`status ${p.status?.toLowerCase() || ''}`}
+            >
+              {p.status?.replace('_', ' ')}
             </span>
-
           </div>
         ))}
       </div>
@@ -138,22 +164,57 @@ function Products(){
   )
 }
 
-function Shades(){
+function Shades() {
   const [shades, setShades] = useState([])
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    api.get('/shades/public')
-      .then(r => setShades(r.data))
+    let active = true
+
+    const fetchShades = async () => {
+      try {
+        const r = await api.get('/shades/public')
+
+        if (active) {
+          setShades(r.data)
+        }
+      } catch (e) {
+        console.error('Shades API error:', e)
+
+        if (active) {
+          setError(
+            e.response?.data?.message ||
+            e.message ||
+            'Failed to load shade cards'
+          )
+        }
+      }
+    }
+
+    fetchShades()
+
+    return () => {
+      active = false
+    }
   }, [])
 
   return (
     <main className="container">
       <h2>Digital Shade Cards</h2>
 
+      {error && (
+        <div className="error">
+          {error}
+        </div>
+      )}
+
+      {!error && shades.length === 0 && (
+        <p>No shade cards available.</p>
+      )}
+
       <div className="grid">
         {shades.map(s => (
           <div className="card" key={s.id}>
-
             {s.imageUrl ? (
               <img
                 className="shadeimg"
@@ -173,15 +234,14 @@ function Shades(){
             </p>
 
             <p>
-              Product: {s.product?.name}
+              Product: {s.product?.name || '-'}
             </p>
 
             <span
-              className={`status ${s.product?.status?.toLowerCase()}`}
+              className={`status ${s.product?.status?.toLowerCase() || ''}`}
             >
-              {s.product?.status?.replace('_', ' ')}
+              {s.product?.status?.replace('_', ' ') || '-'}
             </span>
-
           </div>
         ))}
       </div>
@@ -189,7 +249,7 @@ function Shades(){
   )
 }
 
-function Login(){
+function Login() {
   const [form, setForm] = useState({
     email: '',
     password: ''
@@ -198,8 +258,9 @@ function Login(){
   const [err, setErr] = useState('')
   const nav = useNavigate()
 
-  async function submit(e){
+  async function submit(e) {
     e.preventDefault()
+    setErr('')
 
     try {
       const r = await api.post('/auth/login', form)
@@ -212,8 +273,7 @@ function Login(){
           ? '/admin'
           : '/customer'
       )
-
-    } catch(e) {
+    } catch (e) {
       setErr(
         e.response?.data?.message ||
         'Login failed'
@@ -224,7 +284,6 @@ function Login(){
   return (
     <main className="auth">
       <form className="card" onSubmit={submit}>
-
         <h2>Login</h2>
 
         <input
@@ -237,6 +296,7 @@ function Login(){
               email: e.target.value
             })
           }
+          required
         />
 
         <input
@@ -249,6 +309,7 @@ function Login(){
               password: e.target.value
             })
           }
+          required
         />
 
         {err && (
@@ -260,13 +321,12 @@ function Login(){
         <button className="button">
           Login
         </button>
-
       </form>
     </main>
   )
 }
 
-function Register(){
+function Register() {
   const [form, setForm] = useState({
     email: '',
     password: '',
@@ -288,8 +348,9 @@ function Register(){
       [k]: v
     })
 
-  async function submit(e){
+  async function submit(e) {
     e.preventDefault()
+    setErr('')
 
     try {
       const r = await api.post('/auth/register', form)
@@ -298,8 +359,7 @@ function Register(){
       localStorage.setItem('cc_role', r.data.role)
 
       nav('/customer')
-
-    } catch(e) {
+    } catch (e) {
       setErr(
         e.response?.data?.message ||
         'Registration failed'
@@ -309,12 +369,10 @@ function Register(){
 
   return (
     <main className="auth">
-
       <form
         className="card wide"
         onSubmit={submit}
       >
-
         <h2>Create Customer Account</h2>
 
         {Object.keys(form).map(k => (
@@ -332,10 +390,11 @@ function Register(){
             onChange={e =>
               set(k, e.target.value)
             }
-            required={
-              ['email', 'password', 'companyName']
-                .includes(k)
-            }
+            required={[
+              'email',
+              'password',
+              'companyName'
+            ].includes(k)}
           />
         ))}
 
@@ -348,35 +407,62 @@ function Register(){
         <button className="button">
           Register
         </button>
-
       </form>
-
     </main>
   )
 }
 
-function Customer(){
+function Customer() {
   const [me, setMe] = useState(null)
   const [orders, setOrders] = useState([])
   const [invoices, setInvoices] = useState([])
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    Promise.all([
-      api.get('/customer/me'),
-      api.get('/customer/orders'),
-      api.get('/customer/invoices')
-    ])
-    .then(([a, b, c]) => {
-      setMe(a.data)
-      setOrders(b.data)
-      setInvoices(c.data)
-    })
+    let active = true
+
+    const fetchCustomerData = async () => {
+      try {
+        const [a, b, c] = await Promise.all([
+          api.get('/customer/me'),
+          api.get('/customer/orders'),
+          api.get('/customer/invoices')
+        ])
+
+        if (active) {
+          setMe(a.data)
+          setOrders(b.data)
+          setInvoices(c.data)
+        }
+      } catch (e) {
+        console.error('Customer API error:', e)
+
+        if (active) {
+          setError(
+            e.response?.data?.message ||
+            e.message ||
+            'Failed to load customer dashboard'
+          )
+        }
+      }
+    }
+
+    fetchCustomerData()
+
+    return () => {
+      active = false
+    }
   }, [])
 
   return (
     <main className="container">
-
       <h2>Customer Dashboard</h2>
+
+      {error && (
+        <div className="error">
+          {error}
+        </div>
+      )}
 
       {me && (
         <p>
@@ -385,7 +471,6 @@ function Customer(){
       )}
 
       <div className="stats">
-
         <div className="stat">
           <b>{orders.length}</b>
           <span>Orders</span>
@@ -395,45 +480,38 @@ function Customer(){
           <b>{invoices.length}</b>
           <span>Invoices</span>
         </div>
-
       </div>
 
       <h3>Order History</h3>
 
       <div className="table">
-
         {orders.map(o => (
           <div className="tr" key={o.id}>
-
             <span>{o.orderNumber}</span>
             <span>{o.status}</span>
             <span>
-              ₹ {o.totalAmount.toFixed(2)}
+              ₹ {Number(o.totalAmount || 0).toFixed(2)}
             </span>
             <span>
               {o.trackingNumber || '-'}
             </span>
-
           </div>
         ))}
-
       </div>
 
       <h3>Invoices</h3>
 
       <div className="table">
-
         {invoices.map(i => (
           <div className="tr" key={i.id}>
-
             <span>{i.invoiceNumber}</span>
 
             <span>
-              ₹ {i.amount.toFixed(2)}
+              ₹ {Number(i.amount || 0).toFixed(2)}
             </span>
 
             <span>
-              Outstanding ₹ {i.outstanding.toFixed(2)}
+              Outstanding ₹ {Number(i.outstanding || 0).toFixed(2)}
             </span>
 
             <a
@@ -443,20 +521,25 @@ function Customer(){
             >
               PDF
             </a>
-
           </div>
         ))}
-
       </div>
-
     </main>
   )
 }
 
-function Admin(){
+function Admin() {
   const [products, setProducts] = useState([])
   const [orders, setOrders] = useState([])
   const [customers, setCustomers] = useState([])
+
+  const [loadingProducts, setLoadingProducts] = useState(true)
+  const [loadingOrders, setLoadingOrders] = useState(true)
+  const [loadingCustomers, setLoadingCustomers] = useState(true)
+
+  const [productError, setProductError] = useState('')
+  const [orderError, setOrderError] = useState('')
+  const [customerError, setCustomerError] = useState('')
 
   const [newP, setNewP] = useState({
     code: '',
@@ -473,98 +556,215 @@ function Admin(){
 
   const [stock, setStock] = useState({})
 
-  const load = () =>
-    Promise.all([
-      api.get('/admin/products'),
-      api.get('/admin/orders'),
-      api.get('/admin/customers')
+  async function loadProducts() {
+    setLoadingProducts(true)
+    setProductError('')
+
+    try {
+      const r = await api.get('/admin/products')
+      console.log('Admin products API:', r.data)
+      setProducts(r.data)
+    } catch (e) {
+      console.error('Admin products API error:', e)
+
+      setProductError(
+        e.response?.data?.message ||
+        e.message ||
+        'Failed to load products'
+      )
+    } finally {
+      setLoadingProducts(false)
+    }
+  }
+
+  async function loadOrders() {
+    setLoadingOrders(true)
+    setOrderError('')
+
+    try {
+      const r = await api.get('/admin/orders')
+      setOrders(r.data)
+    } catch (e) {
+      console.error('Admin orders API error:', e)
+
+      setOrderError(
+        e.response?.data?.message ||
+        e.message ||
+        'Failed to load orders'
+      )
+    } finally {
+      setLoadingOrders(false)
+    }
+  }
+
+  async function loadCustomers() {
+    setLoadingCustomers(true)
+    setCustomerError('')
+
+    try {
+      const r = await api.get('/admin/customers')
+      setCustomers(r.data)
+    } catch (e) {
+      console.error('Admin customers API error:', e)
+
+      setCustomerError(
+        e.response?.data?.message ||
+        e.message ||
+        'Failed to load customers'
+      )
+    } finally {
+      setLoadingCustomers(false)
+    }
+  }
+
+  async function load() {
+    await Promise.all([
+      loadProducts(),
+      loadOrders(),
+      loadCustomers()
     ])
-    .then(([p, o, c]) => {
-      setProducts(p.data)
-      setOrders(o.data)
-      setCustomers(c.data)
-    })
+  }
 
-  useEffect(load, [])
+  useEffect(() => {
+    load()
+  }, [])
 
-  const setP = (k, v) =>
+  const setP = (k, v) => {
     setNewP({
       ...newP,
       [k]: v
     })
-
-  async function addProduct(e){
-    e.preventDefault()
-
-    await api.post('/admin/products', {
-      ...newP,
-      stockQuantity: Number(newP.stockQuantity),
-      minimumStock: Number(newP.minimumStock)
-    })
-
-    setNewP({
-      ...newP,
-      code: '',
-      name: '',
-      stockQuantity: 0
-    })
-
-    load()
   }
 
-  async function adjust(id, delta){
+  async function addProduct(e) {
+    e.preventDefault()
+
+    try {
+      await api.post('/admin/products', {
+        ...newP,
+        stockQuantity: Number(newP.stockQuantity),
+        minimumStock: Number(newP.minimumStock)
+      })
+
+      alert('Product added successfully')
+
+      setNewP({
+        code: '',
+        name: '',
+        category: 'Reactive Dyes',
+        description: '',
+        shade: '',
+        application: '',
+        packing: '25 KG / 50 KG',
+        imageUrl: '',
+        stockQuantity: 0,
+        minimumStock: 0
+      })
+
+      await loadProducts()
+    } catch (e) {
+      console.error('Add product error:', e)
+
+      alert(
+        e.response?.data?.message ||
+        'Failed to add product'
+      )
+    }
+  }
+
+  async function adjust(id, delta) {
     const q = Number(
       stock[id]?.quantity || 0
     )
 
-    if(!q) return
+    if (!q || q <= 0) {
+      alert('Enter a valid quantity')
+      return
+    }
 
     const reason =
       stock[id]?.reason ||
       'Manual stock adjustment'
 
-    await api.post(
-      `/admin/products/${id}/stock/${delta > 0 ? 'add' : 'remove'}`,
-      {
-        quantity: q,
-        reason
-      }
-    )
+    try {
+      await api.post(
+        `/admin/products/${id}/stock/${delta > 0 ? 'add' : 'remove'}`,
+        {
+          quantity: q,
+          reason
+        }
+      )
 
-    setStock({
-      ...stock,
-      [id]: {}
-    })
+      alert(
+        delta > 0
+          ? 'Stock added successfully'
+          : 'Stock removed successfully'
+      )
 
-    load()
+      setStock({
+        ...stock,
+        [id]: {}
+      })
+
+      await loadProducts()
+    } catch (e) {
+      console.error('Stock adjustment error:', e)
+
+      alert(
+        e.response?.data?.message ||
+        'Failed to adjust stock'
+      )
+    }
   }
 
-  async function deactivate(id){
-    if(confirm('Deactivate this product?')){
+  async function deactivate(id) {
+    if (!confirm('Deactivate this product?')) {
+      return
+    }
+
+    try {
       await api.delete(
         `/admin/products/${id}`
       )
 
-      load()
+      alert('Product deactivated successfully')
+
+      await loadProducts()
+    } catch (e) {
+      console.error('Deactivate product error:', e)
+
+      alert(
+        e.response?.data?.message ||
+        'Failed to deactivate product'
+      )
     }
   }
 
-  async function updateStatus(id, status){
-    await api.put(
-      `/admin/orders/${id}/status`,
-      {status}
-    )
+  async function updateStatus(id, status) {
+    try {
+      await api.put(
+        `/admin/orders/${id}/status`,
+        { status }
+      )
 
-    load()
+      await loadOrders()
+    } catch (e) {
+      console.error('Order status update error:', e)
+
+      alert(
+        e.response?.data?.message ||
+        'Failed to update order status'
+      )
+
+      await loadOrders()
+    }
   }
 
   return (
     <main className="container">
-
       <h2>Admin Dashboard</h2>
 
       <div className="stats">
-
         <div className="stat">
           <b>{products.length}</b>
           <span>Products</span>
@@ -579,18 +779,15 @@ function Admin(){
           <b>{customers.length}</b>
           <span>Customers</span>
         </div>
-
       </div>
 
       <section>
-
         <h3>Add Product</h3>
 
         <form
           className="card formgrid"
           onSubmit={addProduct}
         >
-
           {[
             'code',
             'name',
@@ -606,8 +803,7 @@ function Admin(){
             <input
               key={k}
               type={
-                ['stockQuantity', 'minimumStock']
-                  .includes(k)
+                ['stockQuantity', 'minimumStock'].includes(k)
                   ? 'number'
                   : 'text'
               }
@@ -616,29 +812,41 @@ function Admin(){
               onChange={e =>
                 setP(k, e.target.value)
               }
-              required={
-                ['code', 'name'].includes(k)
-              }
+              required={[
+                'code',
+                'name'
+              ].includes(k)}
             />
           ))}
 
-          <button className="button">
+          <button className="button" type="submit">
             Add Product
           </button>
-
         </form>
-
       </section>
 
       <section>
-
         <h3>Product & Stock Management</h3>
 
-        <div className="grid">
+        {loadingProducts && (
+          <p>Loading products...</p>
+        )}
 
+        {productError && (
+          <div className="error">
+            {productError}
+          </div>
+        )}
+
+        {!loadingProducts &&
+          !productError &&
+          products.length === 0 && (
+            <p>No products found.</p>
+          )}
+
+        <div className="grid">
           {products.map(p => (
             <div className="card" key={p.id}>
-
               <h3>{p.name}</h3>
 
               <p>
@@ -646,19 +854,22 @@ function Admin(){
               </p>
 
               <p>
-                Stock: <b>{p.stockQuantity}</b> |
-                Reserved: <b>{p.reservedQuantity}</b> |
+                Stock: <b>{p.stockQuantity}</b>
+                {' | '}
+                Reserved: <b>{p.reservedQuantity}</b>
+                {' | '}
                 Available: <b>{p.availableQuantity}</b>
               </p>
 
               <span
-                className={`status ${p.status.toLowerCase()}`}
+                className={`status ${p.status?.toLowerCase() || ''}`}
               >
-                {p.status.replace('_', ' ')}
+                {p.status?.replace('_', ' ')}
               </span>
 
               <input
                 type="number"
+                min="1"
                 placeholder="Quantity"
                 value={
                   stock[p.id]?.quantity || ''
@@ -691,8 +902,8 @@ function Admin(){
               />
 
               <div className="actions">
-
                 <button
+                  type="button"
                   className="button"
                   onClick={() =>
                     adjust(p.id, 1)
@@ -702,6 +913,7 @@ function Admin(){
                 </button>
 
                 <button
+                  type="button"
                   className="button danger"
                   onClick={() =>
                     adjust(p.id, -1)
@@ -711,6 +923,7 @@ function Admin(){
                 </button>
 
                 <button
+                  type="button"
                   className="linkbtn"
                   onClick={() =>
                     deactivate(p.id)
@@ -718,33 +931,44 @@ function Admin(){
                 >
                   Deactivate
                 </button>
-
               </div>
-
             </div>
           ))}
-
         </div>
-
       </section>
 
       <section>
-
         <h3>Orders</h3>
 
-        <div className="table">
+        {loadingOrders && (
+          <p>Loading orders...</p>
+        )}
 
+        {orderError && (
+          <div className="error">
+            {orderError}
+          </div>
+        )}
+
+        {!loadingOrders &&
+          !orderError &&
+          orders.length === 0 && (
+            <p>No orders yet.</p>
+          )}
+
+        <div className="table">
           {orders.map(o => (
             <div className="tr" key={o.id}>
-
-              <span>{o.orderNumber}</span>
-
               <span>
-                {o.customer?.companyName}
+                {o.orderNumber}
               </span>
 
               <span>
-                ₹ {o.totalAmount.toFixed(2)}
+                {o.customer?.companyName || '-'}
+              </span>
+
+              <span>
+                ₹ {Number(o.totalAmount || 0).toFixed(2)}
               </span>
 
               <select
@@ -756,7 +980,6 @@ function Admin(){
                   )
                 }
               >
-
                 {[
                   'PLACED',
                   'CONFIRMED',
@@ -767,31 +990,45 @@ function Admin(){
                   'DELIVERED',
                   'CANCELLED'
                 ].map(s => (
-                  <option key={s}>
+                  <option key={s} value={s}>
                     {s}
                   </option>
                 ))}
-
               </select>
-
             </div>
           ))}
-
         </div>
-
       </section>
 
+      <section>
+        <h3>Customers</h3>
+
+        {loadingCustomers && (
+          <p>Loading customers...</p>
+        )}
+
+        {customerError && (
+          <div className="error">
+            {customerError}
+          </div>
+        )}
+
+        {!loadingCustomers &&
+          !customerError &&
+          customers.length === 0 && (
+            <p>No customers yet.</p>
+          )}
+      </section>
     </main>
   )
 }
 
-export default function App(){
+export default function App() {
   return (
     <>
       <Nav />
 
       <Routes>
-
         <Route
           path="/"
           element={<Home />}
@@ -826,9 +1063,7 @@ export default function App(){
           path="/admin"
           element={<Admin />}
         />
-
       </Routes>
     </>
   )
 }
-
