@@ -205,24 +205,7 @@ function Products() {
     })
   }
 
-  /*
-    IMPORTANT CART QUANTITY BEHAVIOR
-
-    The quantity input must NEVER remove the product.
-
-    Example:
-
-    1 -> Backspace -> empty -> type 3
-
-    The product stays in the cart while the customer
-    edits the number.
-
-    The ONLY way to remove a product is the Remove button.
-  */
-
   function updateCartQuantity(productId, quantity) {
-    // Allow the input to temporarily become empty.
-    // DO NOT remove the cart item.
     if (quantity === '') {
       setCart(current =>
         current.map(item =>
@@ -244,8 +227,6 @@ function Products() {
       return
     }
 
-    // Never remove the product because of quantity editing.
-    // If 0 is entered, keep the item and restore 1.
     if (q <= 0) {
       setCart(current =>
         current.map(item =>
@@ -1637,13 +1618,18 @@ function Admin() {
     }
   }
 
+  /* ============================================================
+     FIXED ORDER STATUS UPDATE
+     Backend endpoint is /api/orders/{id}/status
+     ============================================================ */
+
   async function updateStatus(
     id,
     status
   ) {
     try {
       await api.put(
-        `/admin/orders/${id}/status`,
+        `/orders/${id}/status`,
         { status }
       )
 
@@ -1656,6 +1642,7 @@ function Admin() {
 
       alert(
         e.response?.data?.message ||
+        e.response?.data ||
         'Failed to update order status'
       )
 
@@ -1683,10 +1670,6 @@ function Admin() {
           <span>Customers</span>
         </div>
       </div>
-
-      {/* ======================================================
-          ADD PRODUCT
-          ====================================================== */}
 
       <section>
         <h3>Add Product</h3>
@@ -1777,10 +1760,6 @@ function Admin() {
           </button>
         </form>
       </section>
-
-      {/* ======================================================
-          PRODUCT & STOCK MANAGEMENT
-          ====================================================== */}
 
       <section>
         <h3>
@@ -2163,10 +2142,6 @@ function Admin() {
         </div>
       </section>
 
-      {/* ======================================================
-          ORDERS
-          ====================================================== */}
-
       <section>
         <h3>Orders</h3>
 
@@ -2244,10 +2219,6 @@ function Admin() {
           ))}
         </div>
       </section>
-
-      {/* ======================================================
-          CUSTOMERS
-          ====================================================== */}
 
       <section>
         <h3>Customers</h3>
