@@ -14,6 +14,7 @@ import com.chromacore.portal.repo.OrderRepository;
 import com.chromacore.portal.repo.ProductRepository;
 import com.chromacore.portal.repo.StockMovementRepository;
 import com.chromacore.portal.repo.UserRepository;
+import com.chromacore.portal.service.NotificationService;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -37,19 +38,22 @@ public class OrderController {
     private final StockMovementRepository stockMovementRepository;
     private final UserRepository userRepository;
     private final InvoiceRepository invoiceRepository;
+    private final NotificationService notificationService;
 
     public OrderController(
             OrderRepository orderRepository,
             ProductRepository productRepository,
             StockMovementRepository stockMovementRepository,
             UserRepository userRepository,
-            InvoiceRepository invoiceRepository
+            InvoiceRepository invoiceRepository,
+            NotificationService notificationService
     ) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
         this.stockMovementRepository = stockMovementRepository;
         this.userRepository = userRepository;
         this.invoiceRepository = invoiceRepository;
+        this.notificationService = notificationService;
     }
 
     @PostMapping
@@ -240,6 +244,40 @@ public class OrderController {
         invoice.setIssuedAt(Instant.now());
 
         invoiceRepository.save(invoice);
+
+        // Send order confirmation email.
+        notificationService.email(
+                customer.getEmail(),
+                "ChromaCore Order Confirmation - "
+                        + saved.getOrderNumber(),
+                "Dear "
+                        + (
+                                customer.getCompanyName() != null &&
+                                !customer.getCompanyName().isBlank()
+                                        ? customer.getCompanyName()
+                                        : customer.getEmail()
+                        )
+                        + ",\n\n"
+                        + "Thank you for your order with "
+                        + "ChromaCore Dyes & Chemicals.\n\n"
+                        + "Order Number: "
+                        + saved.getOrderNumber()
+                        + "\n"
+                        + "Invoice Number: "
+                        + invoice.getInvoiceNumber()
+                        + "\n"
+                        + String.format(
+                                "Order Total: ₹%.2f%n",
+                                saved.getTotalAmount()
+                        )
+                        + "Order Status: "
+                        + saved.getStatus()
+                        + "\n\n"
+                        + "Your invoice is available in the "
+                        + "ChromaCore customer portal.\n\n"
+                        + "Thank you for your business.\n\n"
+                        + "ChromaCore Dyes & Chemicals"
+        );
 
         return ResponseEntity.ok(saved);
     }
