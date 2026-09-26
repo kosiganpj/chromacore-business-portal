@@ -1026,6 +1026,10 @@ function Register() {
   )
 }
 
+/* ============================================================
+   CUSTOMER DASHBOARD + ORDER TRACKING
+   ============================================================ */
+
 function Customer() {
   const [me, setMe] = useState(null)
   const [orders, setOrders] = useState([])
@@ -1095,6 +1099,31 @@ function Customer() {
     me?.email ||
     'Customer'
 
+  const statusSteps = [
+    'PLACED',
+    'CONFIRMED',
+    'PROCESSING',
+    'PACKED',
+    'DISPATCHED',
+    'IN_TRANSIT',
+    'DELIVERED'
+  ]
+
+  function getStatusIndex(status) {
+    return statusSteps.indexOf(status)
+  }
+
+  function formatStatus(status) {
+    return (
+      status
+        ?.replaceAll('_', ' ')
+        ?.toLowerCase()
+        ?.replace(/\b\w/g, c =>
+          c.toUpperCase()
+        ) || '-'
+    )
+  }
+
   return (
     <main className="container">
       <h2>Customer Dashboard</h2>
@@ -1123,40 +1152,120 @@ function Customer() {
         </div>
       </div>
 
-      <h3>Order History</h3>
+      <h3>Order Tracking</h3>
 
-      <div className="table">
-        {orders.length === 0 ? (
+      {orders.length === 0 ? (
+        <div className="card">
           <p>No orders yet.</p>
-        ) : (
-          orders.map(o => (
-            <div
-              className="tr"
-              key={o.id}
-            >
-              <span>
-                {o.orderNumber}
-              </span>
 
-              <span>
-                {o.status}
-              </span>
+          <Link
+            className="button"
+            to="/products"
+          >
+            Browse Products
+          </Link>
+        </div>
+      ) : (
+        <div className="grid">
+          {orders.map(o => {
+            const currentIndex =
+              getStatusIndex(o.status)
 
-              <span>
-                ₹{' '}
-                {Number(
-                  o.totalAmount || 0
-                ).toFixed(2)}
-              </span>
+            const cancelled =
+              o.status === 'CANCELLED'
 
-              <span>
-                {o.trackingNumber ||
-                  '-'}
-              </span>
-            </div>
-          ))
-        )}
-      </div>
+            return (
+              <div
+                className="card"
+                key={o.id}
+              >
+                <h3>
+                  {o.orderNumber}
+                </h3>
+
+                <p>
+                  <b>Order Total:</b> ₹{' '}
+                  {Number(
+                    o.totalAmount || 0
+                  ).toFixed(2)}
+                </p>
+
+                <p>
+                  <b>Current Status:</b>{' '}
+                  <span
+                    className={`status ${
+                      o.status?.toLowerCase() ||
+                      ''
+                    }`}
+                  >
+                    {formatStatus(
+                      o.status
+                    )}
+                  </span>
+                </p>
+
+                {o.trackingNumber && (
+                  <p>
+                    <b>Tracking Number:</b>{' '}
+                    {o.trackingNumber}
+                  </p>
+                )}
+
+                {cancelled ? (
+                  <div className="error">
+                    This order has been
+                    cancelled.
+                  </div>
+                ) : (
+                  <>
+                    <p>
+                      <b>Order Progress</b>
+                    </p>
+
+                    <div className="table">
+                      {statusSteps.map(
+                        (
+                          step,
+                          index
+                        ) => (
+                          <div
+                            className="tr"
+                            key={step}
+                          >
+                            <span>
+                              {index <=
+                              currentIndex
+                                ? '✓'
+                                : '○'}
+                            </span>
+
+                            <span>
+                              {formatStatus(
+                                step
+                              )}
+                            </span>
+
+                            <span>
+                              {index <=
+                              currentIndex
+                                ? 'Completed'
+                                : index ===
+                                    currentIndex +
+                                      1
+                                  ? 'Next'
+                                  : 'Pending'}
+                            </span>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       <h3>Invoices</h3>
 
@@ -1617,11 +1726,6 @@ function Admin() {
       )
     }
   }
-
-  /* ============================================================
-     FIXED ORDER STATUS UPDATE
-     Backend endpoint is /api/orders/{id}/status
-     ============================================================ */
 
   async function updateStatus(
     id,
