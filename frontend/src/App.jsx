@@ -146,9 +146,19 @@ function Products() {
     }
   }, [])
 
+  function getAvailableQuantity(product) {
+    return Number(
+      product.availableQuantity ??
+      product.stockQuantity ??
+      0
+    )
+  }
+
   function addToCart(product) {
     setOrderMessage('')
     setOrderError('')
+
+    const available = getAvailableQuantity(product)
 
     setCart(current => {
       const existing = current.find(
@@ -156,14 +166,30 @@ function Products() {
       )
 
       if (existing) {
+        if (existing.quantity >= available) {
+          setOrderError(
+            `Maximum available quantity for ${product.name} is ${available}.`
+          )
+
+          return current
+        }
+
         return current.map(item =>
           item.product.id === product.id
             ? {
                 ...item,
-                quantity: item.quantity + 1
+                quantity: Number(item.quantity) + 1
               }
             : item
         )
+      }
+
+      if (available <= 0) {
+        setOrderError(
+          `${product.name} is currently out of stock.`
+        )
+
+        return current
       }
 
       return [
@@ -177,27 +203,117 @@ function Products() {
   }
 
   function updateCartQuantity(productId, quantity) {
+    /*
+      IMPORTANT:
+      Do not convert an empty input to zero.
+
+      When the customer presses Backspace,
+      quantity can temporarily be "" while typing.
+      The item remains in the cart.
+    */
+
+    if (quantity === '') {
+      setCart(current =>
+        current.map(item =>
+          item.product.id === productId
+            ? {
+                ...item,
+                quantity: ''
+              }
+            : item
+        )
+      )
+
+      return
+    }
+
     const q = Number(quantity)
 
-    if (!q || q <= 0) {
+    if (!Number.isFinite(q)) {
+      return
+    }
+
+    if (q <= 0) {
       setCart(current =>
         current.filter(
           item => item.product.id !== productId
         )
       )
+
       return
     }
 
     setCart(current =>
-      current.map(item =>
-        item.product.id === productId
+      current.map(item => {
+        if (item.product.id !== productId) {
+          return item
+        }
+
+        const available = getAvailableQuantity(
+          item.product
+        )
+
+        if (q > available) {
+          setOrderError(
+            `Maximum available quantity for ${item.product.name} is ${available}.`
+          )
+
+          return {
+            ...item,
+            quantity: available
+          }
+        }
+
+        setOrderError('')
+
+        return {
+          ...item,
+          quantity: q
+        }
+      })
+    )
+  }
+
+  function finishCartQuantityEdit(productId) {
+    setCart(current => {
+      const item = current.find(
+        item => item.product.id === productId
+      )
+
+      if (!item) {
+        return current
+      }
+
+      const available = getAvailableQuantity(
+        item.product
+      )
+
+      let q = Number(item.quantity)
+
+      if (!Number.isFinite(q) || q <= 0) {
+        q = 1
+      }
+
+      if (available <= 0) {
+        return current.filter(
+          cartItem =>
+            cartItem.product.id !== productId
+        )
+      }
+
+      if (q > available) {
+        q = available
+      }
+
+      return current.map(cartItem =>
+        cartItem.product.id === productId
           ? {
-              ...item,
+              ...cartItem,
               quantity: q
             }
-          : item
+          : cartItem
       )
-    )
+    })
   }
 
   function removeFromCart(productId) {
@@ -213,10 +329,19 @@ function Products() {
   }
 
   const cartTotal = cart.reduce(
-    (sum, item) =>
-      sum +
-      productPrice(item.product) *
-        Number(item.quantity || 0),
+    (sum, item) => {
+      const quantity = Number(item.quantity)
+
+      if (!Number.isFinite(quantity) || quantity <= 0) {
+        return sum
+      }
+
+      return (
+        sum +
+        productPrice(item.product) *
+          quantity
+      )
+    },
     0
   )
 
@@ -246,15 +371,25 @@ function Products() {
     }
 
     for (const item of cart) {
-      const available = Number(
-        item.product.availableQuantity ??
-        item.product.stockQuantity ??
-        0
+      const quantity = Number(item.quantity)
+
+      if (
+        !Number.isFinite(quantity) ||
+        quantity <= 0
+      ) {
+        setOrderError(
+          `Please enter a valid quantity for ${item.product.name}.`
+        )
+        return
+      }
+
+      const available = getAvailableQuantity(
+        item.product
       )
 
       if (
-        available > 0 &&
-        Number(item.quantity) > available
+        available <= 0 ||
+        quantity > available
       ) {
         setOrderError(
           `Insufficient stock for ${item.product.name}. Available: ${available}`
@@ -274,14 +409,25 @@ function Products() {
         }))
       }
 
-      console.log('Create order payload:', payload)
+      console.log(
+        'Create order payload:',
+        payload
+      )
 
-      const r = await api.post('/orders', payload)
+      const r = await api.post(
+        '/orders',
+        payload
+      )
 
-      console.log('Create order response:', r.data)
+      console.log(
+        'Create order response:',
+        r.data
+      )
 
       setCart([])
+
       localStorage.removeItem('cc_cart')
+
       setShippingAddress('')
 
       setOrderMessage(
@@ -291,9 +437,14 @@ function Products() {
       const productsResponse =
         await api.get('/products/public')
 
-      setProducts(productsResponse.data)
+      setProducts(
+        productsResponse.data
+      )
     } catch (e) {
-      console.error('Create order error:', e)
+      console.error(
+        'Create order error:',
+        e
+      )
 
       setOrderError(
         e.response?.data?.message ||
@@ -310,7 +461,9 @@ function Products() {
     <main className="container">
       <h2>Products</h2>
 
-      {loading && <p>Loading products...</p>}
+      {loading && (
+        <p>Loading products...</p>
+      )}
 
       {error && (
         <div className="error">
@@ -318,9 +471,11 @@ function Products() {
         </div>
       )}
 
-      {!loading && !error && products.length === 0 && (
-        <p>No products available.</p>
-      )}
+      {!loading &&
+        !error &&
+        products.length === 0 && (
+          <p>No products available.</p>
+        )}
 
       {isCustomer && (
         <section className="card">
@@ -337,18 +492,26 @@ function Products() {
                     key={item.product.id}
                   >
                     <span>
-                      <b>{item.product.name}</b>
+                      <b>
+                        {item.product.name}
+                      </b>
                       <br />
                       {item.product.code}
                     </span>
 
                     <span>
-                      ₹ {productPrice(item.product).toFixed(2)}
+                      ₹{' '}
+                      {productPrice(
+                        item.product
+                      ).toFixed(2)}
                     </span>
 
                     <input
                       type="number"
                       min="1"
+                      max={getAvailableQuantity(
+                        item.product
+                      )}
                       value={item.quantity}
                       onChange={e =>
                         updateCartQuantity(
@@ -356,13 +519,22 @@ function Products() {
                           e.target.value
                         )
                       }
+                      onBlur={() =>
+                        finishCartQuantityEdit(
+                          item.product.id
+                        )
+                      }
                     />
 
                     <span>
                       ₹{' '}
                       {(
-                        productPrice(item.product) *
-                        Number(item.quantity || 0)
+                        productPrice(
+                          item.product
+                        ) *
+                        Number(
+                          item.quantity || 0
+                        )
                       ).toFixed(2)}
                     </span>
 
@@ -370,7 +542,9 @@ function Products() {
                       type="button"
                       className="linkbtn"
                       onClick={() =>
-                        removeFromCart(item.product.id)
+                        removeFromCart(
+                          item.product.id
+                        )
                       }
                     >
                       Remove
@@ -380,14 +554,17 @@ function Products() {
               </div>
 
               <h3>
-                Total: ₹ {cartTotal.toFixed(2)}
+                Total: ₹{' '}
+                {cartTotal.toFixed(2)}
               </h3>
 
               <textarea
                 placeholder="Shipping address"
                 value={shippingAddress}
                 onChange={e =>
-                  setShippingAddress(e.target.value)
+                  setShippingAddress(
+                    e.target.value
+                  )
                 }
                 rows="4"
               />
@@ -438,88 +615,120 @@ function Products() {
       {!isCustomer && (
         <div className="card">
           <p>
-            Login as a customer to add products to your cart
-            and place orders.
+            Login as a customer to add products to
+            your cart and place orders.
           </p>
 
-          <Link className="button" to="/login">
+          <Link
+            className="button"
+            to="/login"
+          >
             Customer Login
           </Link>
         </div>
       )}
 
       <div className="grid">
-        {products.map(p => (
-          <div className="card" key={p.id}>
-            <div className="productimg">
-              {p.imageUrl ? (
-                <img
-                  src={p.imageUrl}
-                  alt={p.name}
-                />
-              ) : (
-                <span>
-                  {p.shade || 'CHEMICAL'}
-                </span>
+        {products.map(p => {
+          const available =
+            getAvailableQuantity(p)
+
+          const cartItem = cart.find(
+            item =>
+              item.product.id === p.id
+          )
+
+          const cartQuantity =
+            cartItem
+              ? Number(
+                  cartItem.quantity || 0
+                )
+              : 0
+
+          const maxReached =
+            cartQuantity >= available
+
+          return (
+            <div
+              className="card"
+              key={p.id}
+            >
+              <div className="productimg">
+                {p.imageUrl ? (
+                  <img
+                    src={p.imageUrl}
+                    alt={p.name}
+                  />
+                ) : (
+                  <span>
+                    {p.shade ||
+                      'CHEMICAL'}
+                  </span>
+                )}
+              </div>
+
+              <h3>{p.name}</h3>
+
+              <p>
+                {p.code} • {p.category}
+              </p>
+
+              <p>
+                {p.description ||
+                  'B2B dye/chemical product.'}
+              </p>
+
+              <p>
+                Price:{' '}
+                <b>
+                  ₹{' '}
+                  {productPrice(
+                    p
+                  ).toFixed(2)}
+                </b>
+              </p>
+
+              <p>
+                Available:{' '}
+                <b>
+                  {available}
+                </b>
+              </p>
+
+              <span
+                className={`status ${
+                  p.status?.toLowerCase() ||
+                  ''
+                }`}
+              >
+                {p.status?.replace(
+                  '_',
+                  ' '
+                )}
+              </span>
+
+              {isCustomer && (
+                <button
+                  type="button"
+                  className="button"
+                  disabled={
+                    p.status !==
+                      'AVAILABLE' ||
+                    available <= 0 ||
+                    maxReached
+                  }
+                  onClick={() =>
+                    addToCart(p)
+                  }
+                >
+                  {maxReached
+                    ? 'Max Quantity Added'
+                    : 'Add to Cart'}
+                </button>
               )}
             </div>
-
-            <h3>{p.name}</h3>
-
-            <p>
-              {p.code} • {p.category}
-            </p>
-
-            <p>
-              {p.description ||
-                'B2B dye/chemical product.'}
-            </p>
-
-            <p>
-              Price:{' '}
-              <b>
-                ₹ {productPrice(p).toFixed(2)}
-              </b>
-            </p>
-
-            <p>
-              Available:{' '}
-              <b>
-                {p.availableQuantity ??
-                  p.stockQuantity ??
-                  0}
-              </b>
-            </p>
-
-            <span
-              className={`status ${
-                p.status?.toLowerCase() || ''
-              }`}
-            >
-              {p.status?.replace('_', ' ')}
-            </span>
-
-            {isCustomer && (
-              <button
-                type="button"
-                className="button"
-                disabled={
-                  p.status !== 'AVAILABLE' ||
-                  Number(
-                    p.availableQuantity ??
-                    p.stockQuantity ??
-                    0
-                  ) <= 0
-                }
-                onClick={() =>
-                  addToCart(p)
-                }
-              >
-                Add to Cart
-              </button>
-            )}
-          </div>
-        ))}
+          )
+        })}
       </div>
     </main>
   )
@@ -534,13 +743,18 @@ function Shades() {
 
     const fetchShades = async () => {
       try {
-        const r = await api.get('/shades/public')
+        const r = await api.get(
+          '/shades/public'
+        )
 
         if (active) {
           setShades(r.data)
         }
       } catch (e) {
-        console.error('Shades API error:', e)
+        console.error(
+          'Shades API error:',
+          e
+        )
 
         if (active) {
           setError(
@@ -569,13 +783,19 @@ function Shades() {
         </div>
       )}
 
-      {!error && shades.length === 0 && (
-        <p>No shade cards available.</p>
-      )}
+      {!error &&
+        shades.length === 0 && (
+          <p>
+            No shade cards available.
+          </p>
+        )}
 
       <div className="grid">
         {shades.map(s => (
-          <div className="card" key={s.id}>
+          <div
+            className="card"
+            key={s.id}
+          >
             {s.imageUrl ? (
               <img
                 className="shadeimg"
@@ -595,15 +815,20 @@ function Shades() {
             </p>
 
             <p>
-              Product: {s.product?.name || '-'}
+              Product:{' '}
+              {s.product?.name || '-'}
             </p>
 
             <span
               className={`status ${
-                s.product?.status?.toLowerCase() || ''
+                s.product?.status?.toLowerCase() ||
+                ''
               }`}
             >
-              {s.product?.status?.replace('_', ' ') || '-'}
+              {s.product?.status?.replace(
+                '_',
+                ' '
+              ) || '-'}
             </span>
           </div>
         ))}
@@ -774,7 +999,10 @@ function Register() {
             placeholder={k}
             value={form[k]}
             onChange={e =>
-              set(k, e.target.value)
+              set(
+                k,
+                e.target.value
+              )
             }
             required={[
               'email',
@@ -809,7 +1037,11 @@ function Customer() {
 
     const fetchCustomerData = async () => {
       try {
-        const [a, b, c] = await Promise.all([
+        const [
+          a,
+          b,
+          c
+        ] = await Promise.all([
           api.get('/customer/me'),
           api.get('/customer/orders'),
           api.get('/customer/invoices')
@@ -918,7 +1150,8 @@ function Customer() {
               </span>
 
               <span>
-                {o.trackingNumber || '-'}
+                {o.trackingNumber ||
+                  '-'}
               </span>
             </div>
           ))
@@ -1174,15 +1407,26 @@ function Admin() {
       id: product.id,
       code: product.code || '',
       name: product.name || '',
-      category: product.category || '',
-      description: product.description || '',
+      category:
+        product.category || '',
+      description:
+        product.description || '',
       shade: product.shade || '',
-      application: product.application || '',
-      packing: product.packing || '',
-      imageUrl: product.imageUrl || '',
-      price: Number(product.price || 0),
-      stockQuantity: Number(product.stockQuantity || 0),
-      minimumStock: Number(product.minimumStock || 0)
+      application:
+        product.application || '',
+      packing:
+        product.packing || '',
+      imageUrl:
+        product.imageUrl || '',
+      price: Number(
+        product.price || 0
+      ),
+      stockQuantity: Number(
+        product.stockQuantity || 0
+      ),
+      minimumStock: Number(
+        product.minimumStock || 0
+      )
     })
   }
 
@@ -1190,11 +1434,16 @@ function Admin() {
     setEditingProduct(null)
   }
 
-  function setEditProductField(key, value) {
-    setEditingProduct(current => ({
-      ...current,
-      [key]: value
-    }))
+  function setEditProductField(
+    key,
+    value
+  ) {
+    setEditingProduct(
+      current => ({
+        ...current,
+        [key]: value
+      })
+    )
   }
 
   async function saveProduct(e) {
@@ -1204,10 +1453,17 @@ function Admin() {
       return
     }
 
-    const price = Number(editingProduct.price)
+    const price = Number(
+      editingProduct.price
+    )
 
-    if (!Number.isFinite(price) || price < 0) {
-      alert('Enter a valid product price.')
+    if (
+      !Number.isFinite(price) ||
+      price < 0
+    ) {
+      alert(
+        'Enter a valid product price.'
+      )
       return
     }
 
@@ -1217,17 +1473,27 @@ function Admin() {
       const payload = {
         code: editingProduct.code,
         name: editingProduct.name,
-        category: editingProduct.category,
-        description: editingProduct.description,
-        shade: editingProduct.shade,
-        application: editingProduct.application,
-        packing: editingProduct.packing,
-        imageUrl: editingProduct.imageUrl,
+        category:
+          editingProduct.category,
+        description:
+          editingProduct.description,
+        shade:
+          editingProduct.shade,
+        application:
+          editingProduct.application,
+        packing:
+          editingProduct.packing,
+        imageUrl:
+          editingProduct.imageUrl,
         price,
         stockQuantity:
-          Number(editingProduct.stockQuantity),
+          Number(
+            editingProduct.stockQuantity
+          ),
         minimumStock:
-          Number(editingProduct.minimumStock)
+          Number(
+            editingProduct.minimumStock
+          )
       }
 
       console.log(
@@ -1263,7 +1529,10 @@ function Admin() {
     }
   }
 
-  async function adjust(id, delta) {
+  async function adjust(
+    id,
+    delta
+  ) {
     const q = Number(
       stock[id]?.quantity || 0
     )
@@ -1454,7 +1723,9 @@ function Admin() {
             min="0"
             step="0.01"
             placeholder="stockQuantity"
-            value={newP.stockQuantity}
+            value={
+              newP.stockQuantity
+            }
             onChange={e =>
               setP(
                 'stockQuantity',
@@ -1468,7 +1739,9 @@ function Admin() {
             min="0"
             step="0.01"
             placeholder="minimumStock"
-            value={newP.minimumStock}
+            value={
+              newP.minimumStock
+            }
             onChange={e =>
               setP(
                 'minimumStock',
@@ -1524,13 +1797,15 @@ function Admin() {
               <h3>{p.name}</h3>
 
               <p>
-                {p.code} • {p.category}
+                {p.code} •{' '}
+                {p.category}
               </p>
 
               <p>
                 Price:{' '}
                 <b>
-                  ₹ {Number(
+                  ₹{' '}
+                  {Number(
                     p.price || 0
                   ).toFixed(2)}
                 </b>
@@ -1577,10 +1852,13 @@ function Admin() {
                 </button>
               </div>
 
-              {editingProduct?.id === p.id && (
+              {editingProduct?.id ===
+                p.id && (
                 <form
                   className="card"
-                  onSubmit={saveProduct}
+                  onSubmit={
+                    saveProduct
+                  }
                 >
                   <h3>
                     Edit Product
@@ -1905,7 +2183,8 @@ function Admin() {
 
               <span>
                 {o.customer
-                  ?.companyName || '-'}
+                  ?.companyName ||
+                  '-'}
               </span>
 
               <span>
@@ -1984,7 +2263,8 @@ function Admin() {
                   key={c.id}
                 >
                   <span>
-                    {c.companyName || '-'}
+                    {c.companyName ||
+                      '-'}
                   </span>
 
                   <span>
