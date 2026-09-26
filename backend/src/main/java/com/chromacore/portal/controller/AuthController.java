@@ -1,3 +1,4 @@
+
 package com.chromacore.portal.controller;
 
 import com.chromacore.portal.dto.AuthDtos.*;
@@ -34,6 +35,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public AuthResponse login(@RequestBody LoginRequest r) {
+
         AppUser u = users.findByEmailIgnoreCase(r.email())
                 .orElseThrow(() ->
                         new IllegalArgumentException(
@@ -64,6 +66,7 @@ public class AuthController {
     public ResponseEntity<?> register(
             @RequestBody RegisterRequest r
     ) {
+
         if (r == null ||
                 r.email() == null ||
                 r.email().isBlank() ||
@@ -82,9 +85,11 @@ public class AuthController {
         AppUser user = new AppUser();
 
         user.setEmail(r.email().trim());
+
         user.setPasswordHash(
                 encoder.encode(r.password())
         );
+
         user.setRole(Role.CUSTOMER);
 
         if (r.companyName() != null) {
@@ -94,6 +99,18 @@ public class AuthController {
         AppUser saved = users.save(user);
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(saved);
+                .body(
+                        new AuthResponse(
+                                jwt.generate(
+                                        saved.getEmail(),
+                                        saved.getRole().name(),
+                                        saved.getId()
+                                ),
+                                saved.getId(),
+                                saved.getEmail(),
+                                saved.getRole().name(),
+                                saved.getCompanyName()
+                        )
+                );
     }
 }
