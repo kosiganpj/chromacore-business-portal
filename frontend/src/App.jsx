@@ -8,7 +8,9 @@ function Nav() {
   const nav = useNavigate()
 
   const logout = () => {
-    localStorage.clear()
+    localStorage.removeItem('cc_token')
+    localStorage.removeItem('cc_role')
+    localStorage.removeItem('cc_cart')
     nav('/')
   }
 
@@ -84,7 +86,15 @@ function Products() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  const [cart, setCart] = useState([])
+  const [cart, setCart] = useState(() => {
+    try {
+      const savedCart = localStorage.getItem('cc_cart')
+      return savedCart ? JSON.parse(savedCart) : []
+    } catch {
+      return []
+    }
+  })
+
   const [shippingAddress, setShippingAddress] = useState('')
   const [placingOrder, setPlacingOrder] = useState(false)
   const [orderMessage, setOrderMessage] = useState('')
@@ -93,6 +103,13 @@ function Products() {
   const token = localStorage.getItem('cc_token')
   const role = localStorage.getItem('cc_role')
   const isCustomer = token && role === 'CUSTOMER'
+
+  useEffect(() => {
+    localStorage.setItem(
+      'cc_cart',
+      JSON.stringify(cart)
+    )
+  }, [cart])
 
   useEffect(() => {
     let active = true
@@ -264,6 +281,7 @@ function Products() {
       console.log('Create order response:', r.data)
 
       setCart([])
+      localStorage.removeItem('cc_cart')
       setShippingAddress('')
 
       setOrderMessage(
@@ -1547,8 +1565,6 @@ function Admin() {
                 )}
               </span>
 
-              {/* EDIT PRODUCT BUTTON */}
-
               <div className="actions">
                 <button
                   type="button"
@@ -1560,8 +1576,6 @@ function Admin() {
                   Edit Product
                 </button>
               </div>
-
-              {/* EDIT PRODUCT FORM */}
 
               {editingProduct?.id === p.id && (
                 <form
@@ -1769,8 +1783,6 @@ function Admin() {
                   </div>
                 </form>
               )}
-
-              {/* STOCK CONTROLS */}
 
               <input
                 type="number"
