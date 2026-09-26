@@ -4,10 +4,12 @@ package com.chromacore.portal.controller;
 import com.chromacore.portal.dto.OrderDtos;
 import com.chromacore.portal.model.AppUser;
 import com.chromacore.portal.model.CustomerOrder;
+import com.chromacore.portal.model.Invoice;
 import com.chromacore.portal.model.OrderItem;
 import com.chromacore.portal.model.OrderStatus;
 import com.chromacore.portal.model.Product;
 import com.chromacore.portal.model.StockMovement;
+import com.chromacore.portal.repo.InvoiceRepository;
 import com.chromacore.portal.repo.OrderRepository;
 import com.chromacore.portal.repo.ProductRepository;
 import com.chromacore.portal.repo.StockMovementRepository;
@@ -34,23 +36,21 @@ public class OrderController {
     private final ProductRepository productRepository;
     private final StockMovementRepository stockMovementRepository;
     private final UserRepository userRepository;
+    private final InvoiceRepository invoiceRepository;
 
     public OrderController(
             OrderRepository orderRepository,
             ProductRepository productRepository,
             StockMovementRepository stockMovementRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            InvoiceRepository invoiceRepository
     ) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
         this.stockMovementRepository = stockMovementRepository;
         this.userRepository = userRepository;
+        this.invoiceRepository = invoiceRepository;
     }
-
-    // ============================================================
-    // CREATE ORDER
-    // CUSTOMER ONLY
-    // ============================================================
 
     @PostMapping
     @PreAuthorize("hasRole('CUSTOMER')")
@@ -85,10 +85,6 @@ public class OrderController {
                     .body("Customer account not found.");
         }
 
-        // ========================================================
-        // AGGREGATE DUPLICATE PRODUCT IDS
-        // ========================================================
-
         Map<Long, Double> requestedQuantities =
                 new LinkedHashMap<>();
 
@@ -110,10 +106,6 @@ public class OrderController {
                     Double::sum
             );
         }
-
-        // ========================================================
-        // VALIDATE EVERYTHING BEFORE RESERVING ANY STOCK
-        // ========================================================
 
         Map<Long, Product> productsById =
                 new LinkedHashMap<>();
@@ -157,10 +149,6 @@ public class OrderController {
             productsById.put(productId, product);
         }
 
-        // ========================================================
-        // CREATE ORDER
-        // ========================================================
-
         CustomerOrder order =
                 new CustomerOrder();
 
@@ -187,10 +175,6 @@ public class OrderController {
         );
 
         double total = 0;
-
-        // ========================================================
-        // RESERVE STOCK
-        // ========================================================
 
         for (Map.Entry<Long, Double> entry :
                 requestedQuantities.entrySet()) {
@@ -221,7 +205,6 @@ public class OrderController {
             orderItem.setProduct(product);
             orderItem.setQuantity(quantity);
 
-            // Always use the database price.
             orderItem.setUnitPrice(
                     product.getPrice()
             );
@@ -239,28 +222,33 @@ public class OrderController {
         CustomerOrder saved =
                 orderRepository.save(order);
 
+        // Create invoice automatically for the new order.
+        Invoice invoice = new Invoice();
+
+        invoice.setInvoiceNumber(
+                "CC-INV-" +
+                        UUID.randomUUID()
+                                .toString()
+                                .substring(0, 8)
+                                .toUpperCase()
+        );
+
+        invoice.setOrder(saved);
+        invoice.setCustomer(customer);
+        invoice.setAmount(saved.getTotalAmount());
+        invoice.setPaidAmount(0);
+        invoice.setIssuedAt(Instant.now());
+
+        invoiceRepository.save(invoice);
+
         return ResponseEntity.ok(saved);
     }
-
-    // ============================================================
-    // GET ALL ORDERS
-    // ADMIN ONLY
-    // ============================================================
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<CustomerOrder>> getAllOrders() {
-
-        return ResponseEntity.ok(
-                orderRepository.findAll()
-        );
+        return ResponseEntity.ok(orderRepository.findAll());
     }
-
-    // ============================================================
-    // GET ORDER BY ID
-    // CUSTOMER CAN SEE OWN ORDER
-    // ADMIN CAN SEE ANY ORDER
-    // ============================================================
 
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
@@ -268,51 +256,33 @@ public class OrderController {
             @PathVariable Long id,
             Authentication authentication
     ) {
-
         CustomerOrder order =
-                orderRepository
-                        .findById(id)
-                        .orElse(null);
+                orderRepository.findById(id).orElse(null);
 
         if (order == null) {
-            return ResponseEntity
-                    .status(HttpStatus.NOT_FOUND)
-                    .body(
-                            "Order not found: "
-                                    + id
-                    );
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Order not found: " + id);
         }
 
         boolean admin =
                 authentication.getAuthorities()
                         .stream()
-                        .anyMatch(
-                                a -> a.getAuthority()
-                                        .equals("ROLE_ADMIN")
-                        );
+                        .anyMatch(a -> a.getAuthority()
+                                .equals("ROLE_ADMIN"));
 
         boolean owner =
                 order.getCustomer() != null &&
                 order.getCustomer().getEmail() != null &&
                 order.getCustomer().getEmail()
-                        .equalsIgnoreCase(
-                                authentication.getName()
-                        );
+                        .equalsIgnoreCase(authentication.getName());
 
         if (!admin && !owner) {
-            return ResponseEntity
-                    .status(HttpStatus.FORBIDDEN)
-                    .body(
-                            "You are not allowed to view this order."
-                    );
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You are not allowed to view this order.");
         }
 
         return ResponseEntity.ok(order);
     }
-
-    // ============================================================
-    // GET CUSTOMER ORDERS
-    // ============================================================
 
     @GetMapping("/customer/{customerId}")
     @PreAuthorize("isAuthenticated()")
@@ -320,20 +290,15 @@ public class OrderController {
             @PathVariable Long customerId,
             Authentication authentication
     ) {
-
         boolean admin =
                 authentication.getAuthorities()
                         .stream()
-                        .anyMatch(
-                                a -> a.getAuthority()
-                                        .equals("ROLE_ADMIN")
-                        );
+                        .anyMatch(a -> a.getAuthority()
+                                .equals("ROLE_ADMIN"));
 
         AppUser authenticatedUser =
                 userRepository
-                        .findByEmailIgnoreCase(
-                                authentication.getName()
-                        )
+                        .findByEmailIgnoreCase(authentication.getName())
                         .orElse(null);
 
         if (!admin &&
@@ -341,25 +306,16 @@ public class OrderController {
                         !authenticatedUser.getId()
                                 .equals(customerId))) {
 
-            return ResponseEntity
-                    .status(HttpStatus.FORBIDDEN)
-                    .body(
-                            "You are not allowed to view these orders."
-                    );
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You are not allowed to view these orders.");
         }
 
         return ResponseEntity.ok(
-                orderRepository
-                        .findByCustomerIdOrderByCreatedAtDesc(
-                                customerId
-                        )
+                orderRepository.findByCustomerIdOrderByCreatedAtDesc(
+                        customerId
+                )
         );
     }
-
-    // ============================================================
-    // UPDATE ORDER STATUS
-    // ADMIN ONLY
-    // ============================================================
 
     @PutMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
@@ -368,19 +324,12 @@ public class OrderController {
             @PathVariable Long id,
             @RequestBody OrderDtos.StatusUpdateRequest request
     ) {
-
         CustomerOrder order =
-                orderRepository
-                        .findById(id)
-                        .orElse(null);
+                orderRepository.findById(id).orElse(null);
 
         if (order == null) {
-            return ResponseEntity
-                    .status(HttpStatus.NOT_FOUND)
-                    .body(
-                            "Order not found: "
-                                    + id
-                    );
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Order not found: " + id);
         }
 
         if (request == null ||
@@ -391,161 +340,83 @@ public class OrderController {
                     .body("Status is required.");
         }
 
-        OrderStatus oldStatus =
-                order.getStatus();
-
+        OrderStatus oldStatus = order.getStatus();
         OrderStatus newStatus;
 
         try {
-
-            newStatus =
-                    OrderStatus.valueOf(
-                            request.status()
-                                    .trim()
-                                    .toUpperCase()
-                    );
-
+            newStatus = OrderStatus.valueOf(
+                    request.status().trim().toUpperCase()
+            );
         } catch (IllegalArgumentException e) {
-
             return ResponseEntity.badRequest()
-                    .body(
-                            "Invalid order status: "
-                                    + request.status()
-                    );
+                    .body("Invalid order status: " + request.status());
         }
 
-        // ========================================================
-        // SAME STATUS
-        // ========================================================
-
         if (oldStatus == newStatus) {
-
             if (request.trackingNumber() != null) {
-                order.setTrackingNumber(
-                        request.trackingNumber()
-                );
+                order.setTrackingNumber(request.trackingNumber());
             }
 
             if (request.transportName() != null) {
-                order.setTransportName(
-                        request.transportName()
-                );
+                order.setTransportName(request.transportName());
             }
 
-            order.setUpdatedAt(
-                    Instant.now()
-            );
+            order.setUpdatedAt(Instant.now());
 
             return ResponseEntity.ok(
                     orderRepository.save(order)
             );
         }
 
-        // ========================================================
-        // TERMINAL STATUSES
-        // ========================================================
-
         if (oldStatus == OrderStatus.DELIVERED) {
-
             return ResponseEntity.badRequest()
-                    .body(
-                            "Delivered orders cannot change status."
-                    );
+                    .body("Delivered orders cannot change status.");
         }
 
         if (oldStatus == OrderStatus.CANCELLED) {
-
             return ResponseEntity.badRequest()
-                    .body(
-                            "Cancelled orders cannot change status."
-                    );
+                    .body("Cancelled orders cannot change status.");
         }
 
-        // ========================================================
-        // VALID STATE TRANSITION
-        // ========================================================
-
-        if (!isValidTransition(
-                oldStatus,
-                newStatus
-        )) {
-
+        if (!isValidTransition(oldStatus, newStatus)) {
             return ResponseEntity.badRequest()
                     .body(
                             "Invalid status transition: "
-                                    + oldStatus
-                                    + " -> "
-                                    + newStatus
+                                    + oldStatus + " -> " + newStatus
                     );
         }
 
-        // ========================================================
-        // CANCEL
-        // ========================================================
-
         if (newStatus == OrderStatus.CANCELLED) {
-
             releaseReservations(order);
+            order.setStatus(OrderStatus.CANCELLED);
 
-            order.setStatus(
-                    OrderStatus.CANCELLED
-            );
-        }
-
-        // ========================================================
-        // DELIVER
-        // ========================================================
-
-        else if (newStatus == OrderStatus.DELIVERED) {
-
+        } else if (newStatus == OrderStatus.DELIVERED) {
             fulfillReservations(order);
+            order.setStatus(OrderStatus.DELIVERED);
 
-            order.setStatus(
-                    OrderStatus.DELIVERED
-            );
-        }
-
-        // ========================================================
-        // NORMAL TRANSITION
-        // ========================================================
-
-        else {
-
-            order.setStatus(
-                    newStatus
-            );
+        } else {
+            order.setStatus(newStatus);
         }
 
         if (request.trackingNumber() != null) {
-            order.setTrackingNumber(
-                    request.trackingNumber()
-            );
+            order.setTrackingNumber(request.trackingNumber());
         }
 
         if (request.transportName() != null) {
-            order.setTransportName(
-                    request.transportName()
-            );
+            order.setTransportName(request.transportName());
         }
 
-        order.setUpdatedAt(
-                Instant.now()
-        );
+        order.setUpdatedAt(Instant.now());
 
         return ResponseEntity.ok(
                 orderRepository.save(order)
         );
     }
 
-    // ============================================================
-    // VALID ORDER STATUS TRANSITIONS
-    // ============================================================
-
     private boolean isValidTransition(
             OrderStatus oldStatus,
             OrderStatus newStatus
     ) {
-
         return switch (oldStatus) {
 
             case PLACED ->
@@ -576,16 +447,10 @@ public class OrderController {
         };
     }
 
-    // ============================================================
-    // RELEASE RESERVED STOCK
-    // ============================================================
-
     private void releaseReservations(
             CustomerOrder order
     ) {
-
-        for (OrderItem item :
-                order.getItems()) {
+        for (OrderItem item : order.getItems()) {
 
             Product product =
                     item.getProduct();
@@ -609,22 +474,14 @@ public class OrderController {
 
             product.refreshStatus();
 
-            productRepository.save(
-                    product
-            );
+            productRepository.save(product);
         }
     }
-
-    // ============================================================
-    // FULFILL RESERVED STOCK
-    // ============================================================
 
     private void fulfillReservations(
             CustomerOrder order
     ) {
-
-        for (OrderItem item :
-                order.getItems()) {
+        for (OrderItem item : order.getItems()) {
 
             Product product =
                     item.getProduct();
@@ -632,18 +489,14 @@ public class OrderController {
             double quantity =
                     item.getQuantity();
 
-            if (product.getReservedQuantity()
-                    < quantity) {
-
+            if (product.getReservedQuantity() < quantity) {
                 throw new IllegalStateException(
                         "Reserved stock is insufficient for product "
                                 + product.getCode()
                 );
             }
 
-            if (product.getStockQuantity()
-                    < quantity) {
-
+            if (product.getStockQuantity() < quantity) {
                 throw new IllegalStateException(
                         "Physical stock is insufficient for product "
                                 + product.getCode()
@@ -667,9 +520,7 @@ public class OrderController {
             product.refreshStatus();
 
             Product saved =
-                    productRepository.save(
-                            product
-                    );
+                    productRepository.save(product);
 
             recordMovement(
                     saved,
@@ -683,17 +534,12 @@ public class OrderController {
         }
     }
 
-    // ============================================================
-    // RECORD STOCK MOVEMENT
-    // ============================================================
-
     private void recordMovement(
             Product product,
             double delta,
             String reason,
             String email
     ) {
-
         StockMovement movement =
                 new StockMovement();
 
@@ -715,7 +561,6 @@ public class OrderController {
         );
 
         if (email != null) {
-
             userRepository
                     .findByEmailIgnoreCase(email)
                     .ifPresent(
@@ -728,37 +573,25 @@ public class OrderController {
         );
     }
 
-    // ============================================================
-    // DELETE ORDER
-    // ADMIN ONLY
-    // ============================================================
-
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public ResponseEntity<?> deleteOrder(
             @PathVariable Long id
     ) {
-
         CustomerOrder order =
-                orderRepository
-                        .findById(id)
-                        .orElse(null);
+                orderRepository.findById(id).orElse(null);
 
         if (order == null) {
-
-            return ResponseEntity
-                    .status(HttpStatus.NOT_FOUND)
-                    .body(
-                            "Order not found: "
-                                    + id
-                    );
+            return ResponseEntity.status(
+                    HttpStatus.NOT_FOUND
+            ).body(
+                    "Order not found: " + id
+            );
         }
 
-        if (order.getStatus()
-                != OrderStatus.CANCELLED &&
-                order.getStatus()
-                        != OrderStatus.DELIVERED) {
+        if (order.getStatus() != OrderStatus.CANCELLED &&
+                order.getStatus() != OrderStatus.DELIVERED) {
 
             releaseReservations(order);
         }
