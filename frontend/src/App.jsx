@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react'
 import { Routes, Route, Link, useNavigate } from 'react-router-dom'
 import api from './api'
@@ -271,7 +270,6 @@ function Products() {
         `Order ${r.data?.orderNumber || ''} placed successfully.`
       )
 
-      // Refresh products because stock has now been reserved.
       const productsResponse =
         await api.get('/products/public')
 
@@ -953,6 +951,10 @@ function Customer() {
   )
 }
 
+/* ============================================================
+   ADMIN DASHBOARD
+   ============================================================ */
+
 function Admin() {
   const [products, setProducts] = useState([])
   const [orders, setOrders] = useState([])
@@ -985,11 +987,18 @@ function Admin() {
     application: '',
     packing: '25 KG / 50 KG',
     imageUrl: '',
+    price: 0,
     stockQuantity: 0,
     minimumStock: 0
   })
 
   const [stock, setStock] = useState({})
+
+  const [editingProduct, setEditingProduct] =
+    useState(null)
+
+  const [savingProduct, setSavingProduct] =
+    useState(false)
 
   async function loadProducts() {
     setLoadingProducts(true)
@@ -1098,6 +1107,7 @@ function Admin() {
         '/admin/products',
         {
           ...newP,
+          price: Number(newP.price),
           stockQuantity:
             Number(
               newP.stockQuantity
@@ -1122,6 +1132,7 @@ function Admin() {
         application: '',
         packing: '25 KG / 50 KG',
         imageUrl: '',
+        price: 0,
         stockQuantity: 0,
         minimumStock: 0
       })
@@ -1137,6 +1148,100 @@ function Admin() {
         e.response?.data?.message ||
         'Failed to add product'
       )
+    }
+  }
+
+  function startEditProduct(product) {
+    setEditingProduct({
+      id: product.id,
+      code: product.code || '',
+      name: product.name || '',
+      category: product.category || '',
+      description: product.description || '',
+      shade: product.shade || '',
+      application: product.application || '',
+      packing: product.packing || '',
+      imageUrl: product.imageUrl || '',
+      price: Number(product.price || 0),
+      stockQuantity: Number(product.stockQuantity || 0),
+      minimumStock: Number(product.minimumStock || 0)
+    })
+  }
+
+  function cancelEditProduct() {
+    setEditingProduct(null)
+  }
+
+  function setEditProductField(key, value) {
+    setEditingProduct(current => ({
+      ...current,
+      [key]: value
+    }))
+  }
+
+  async function saveProduct(e) {
+    e.preventDefault()
+
+    if (!editingProduct) {
+      return
+    }
+
+    const price = Number(editingProduct.price)
+
+    if (!Number.isFinite(price) || price < 0) {
+      alert('Enter a valid product price.')
+      return
+    }
+
+    setSavingProduct(true)
+
+    try {
+      const payload = {
+        code: editingProduct.code,
+        name: editingProduct.name,
+        category: editingProduct.category,
+        description: editingProduct.description,
+        shade: editingProduct.shade,
+        application: editingProduct.application,
+        packing: editingProduct.packing,
+        imageUrl: editingProduct.imageUrl,
+        price,
+        stockQuantity:
+          Number(editingProduct.stockQuantity),
+        minimumStock:
+          Number(editingProduct.minimumStock)
+      }
+
+      console.log(
+        'Update product payload:',
+        payload
+      )
+
+      await api.put(
+        `/admin/products/${editingProduct.id}`,
+        payload
+      )
+
+      alert(
+        'Product updated successfully'
+      )
+
+      setEditingProduct(null)
+
+      await loadProducts()
+    } catch (e) {
+      console.error(
+        'Update product error:',
+        e
+      )
+
+      alert(
+        e.response?.data?.message ||
+        e.response?.data ||
+        'Failed to update product'
+      )
+    } finally {
+      setSavingProduct(false)
     }
   }
 
@@ -1273,6 +1378,10 @@ function Admin() {
         </div>
       </div>
 
+      {/* ======================================================
+          ADD PRODUCT
+          ====================================================== */}
+
       <section>
         <h3>Add Product</h3>
 
@@ -1288,20 +1397,11 @@ function Admin() {
             'shade',
             'application',
             'packing',
-            'imageUrl',
-            'stockQuantity',
-            'minimumStock'
+            'imageUrl'
           ].map(k => (
             <input
               key={k}
-              type={
-                [
-                  'stockQuantity',
-                  'minimumStock'
-                ].includes(k)
-                  ? 'number'
-                  : 'text'
-              }
+              type="text"
               placeholder={k}
               value={newP[k]}
               onChange={e =>
@@ -1317,6 +1417,48 @@ function Admin() {
             />
           ))}
 
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="price"
+            value={newP.price}
+            onChange={e =>
+              setP(
+                'price',
+                e.target.value
+              )
+            }
+          />
+
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="stockQuantity"
+            value={newP.stockQuantity}
+            onChange={e =>
+              setP(
+                'stockQuantity',
+                e.target.value
+              )
+            }
+          />
+
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="minimumStock"
+            value={newP.minimumStock}
+            onChange={e =>
+              setP(
+                'minimumStock',
+                e.target.value
+              )
+            }
+          />
+
           <button
             className="button"
             type="submit"
@@ -1325,6 +1467,10 @@ function Admin() {
           </button>
         </form>
       </section>
+
+      {/* ======================================================
+          PRODUCT & STOCK MANAGEMENT
+          ====================================================== */}
 
       <section>
         <h3>
@@ -1364,6 +1510,15 @@ function Admin() {
               </p>
 
               <p>
+                Price:{' '}
+                <b>
+                  ₹ {Number(
+                    p.price || 0
+                  ).toFixed(2)}
+                </b>
+              </p>
+
+              <p>
                 Stock:{' '}
                 <b>
                   {p.stockQuantity}
@@ -1391,6 +1546,231 @@ function Admin() {
                   ' '
                 )}
               </span>
+
+              {/* EDIT PRODUCT BUTTON */}
+
+              <div className="actions">
+                <button
+                  type="button"
+                  className="button"
+                  onClick={() =>
+                    startEditProduct(p)
+                  }
+                >
+                  Edit Product
+                </button>
+              </div>
+
+              {/* EDIT PRODUCT FORM */}
+
+              {editingProduct?.id === p.id && (
+                <form
+                  className="card"
+                  onSubmit={saveProduct}
+                >
+                  <h3>
+                    Edit Product
+                  </h3>
+
+                  <input
+                    placeholder="Product Code"
+                    value={
+                      editingProduct.code
+                    }
+                    onChange={e =>
+                      setEditProductField(
+                        'code',
+                        e.target.value
+                      )
+                    }
+                    required
+                  />
+
+                  <input
+                    placeholder="Product Name"
+                    value={
+                      editingProduct.name
+                    }
+                    onChange={e =>
+                      setEditProductField(
+                        'name',
+                        e.target.value
+                      )
+                    }
+                    required
+                  />
+
+                  <input
+                    placeholder="Category"
+                    value={
+                      editingProduct.category
+                    }
+                    onChange={e =>
+                      setEditProductField(
+                        'category',
+                        e.target.value
+                      )
+                    }
+                  />
+
+                  <input
+                    placeholder="Description"
+                    value={
+                      editingProduct.description
+                    }
+                    onChange={e =>
+                      setEditProductField(
+                        'description',
+                        e.target.value
+                      )
+                    }
+                  />
+
+                  <input
+                    placeholder="Shade"
+                    value={
+                      editingProduct.shade
+                    }
+                    onChange={e =>
+                      setEditProductField(
+                        'shade',
+                        e.target.value
+                      )
+                    }
+                  />
+
+                  <input
+                    placeholder="Application"
+                    value={
+                      editingProduct.application
+                    }
+                    onChange={e =>
+                      setEditProductField(
+                        'application',
+                        e.target.value
+                      )
+                    }
+                  />
+
+                  <input
+                    placeholder="Packing"
+                    value={
+                      editingProduct.packing
+                    }
+                    onChange={e =>
+                      setEditProductField(
+                        'packing',
+                        e.target.value
+                      )
+                    }
+                  />
+
+                  <input
+                    placeholder="Image URL"
+                    value={
+                      editingProduct.imageUrl
+                    }
+                    onChange={e =>
+                      setEditProductField(
+                        'imageUrl',
+                        e.target.value
+                      )
+                    }
+                  />
+
+                  <label>
+                    Price
+                  </label>
+
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Price"
+                    value={
+                      editingProduct.price
+                    }
+                    onChange={e =>
+                      setEditProductField(
+                        'price',
+                        e.target.value
+                      )
+                    }
+                    required
+                  />
+
+                  <label>
+                    Stock Quantity
+                  </label>
+
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Stock Quantity"
+                    value={
+                      editingProduct.stockQuantity
+                    }
+                    onChange={e =>
+                      setEditProductField(
+                        'stockQuantity',
+                        e.target.value
+                      )
+                    }
+                    required
+                  />
+
+                  <label>
+                    Minimum Stock
+                  </label>
+
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Minimum Stock"
+                    value={
+                      editingProduct.minimumStock
+                    }
+                    onChange={e =>
+                      setEditProductField(
+                        'minimumStock',
+                        e.target.value
+                      )
+                    }
+                    required
+                  />
+
+                  <div className="actions">
+                    <button
+                      type="submit"
+                      className="button"
+                      disabled={
+                        savingProduct
+                      }
+                    >
+                      {savingProduct
+                        ? 'Saving...'
+                        : 'Save Product'}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="linkbtn"
+                      onClick={
+                        cancelEditProduct
+                      }
+                      disabled={
+                        savingProduct
+                      }
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* STOCK CONTROLS */}
 
               <input
                 type="number"
@@ -1474,6 +1854,10 @@ function Admin() {
         </div>
       </section>
 
+      {/* ======================================================
+          ORDERS
+          ====================================================== */}
+
       <section>
         <h3>Orders</h3>
 
@@ -1551,6 +1935,10 @@ function Admin() {
         </div>
       </section>
 
+      {/* ======================================================
+          CUSTOMERS
+          ====================================================== */}
+
       <section>
         <h3>Customers</h3>
 
@@ -1572,6 +1960,31 @@ function Admin() {
             <p>
               No customers yet.
             </p>
+          )}
+
+        {!loadingCustomers &&
+          !customerError &&
+          customers.length > 0 && (
+            <div className="table">
+              {customers.map(c => (
+                <div
+                  className="tr"
+                  key={c.id}
+                >
+                  <span>
+                    {c.companyName || '-'}
+                  </span>
+
+                  <span>
+                    {c.email || '-'}
+                  </span>
+
+                  <span>
+                    {c.phone || '-'}
+                  </span>
+                </div>
+              ))}
+            </div>
           )}
       </section>
     </main>
