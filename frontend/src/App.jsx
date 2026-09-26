@@ -22,6 +22,7 @@ function Nav() {
         <Link to="/shades">Shade Cards</Link>
 
         {!token && <Link to="/login">Login</Link>}
+
         {!token && (
           <Link className="button" to="/register">
             Register
@@ -430,6 +431,10 @@ function Customer() {
         ])
 
         if (active) {
+          console.log('Customer profile:', a.data)
+          console.log('Customer orders:', b.data)
+          console.log('Customer invoices:', c.data)
+
           setMe(a.data)
           setOrders(b.data)
           setInvoices(c.data)
@@ -454,6 +459,11 @@ function Customer() {
     }
   }, [])
 
+  const welcomeName =
+    me?.companyName ||
+    me?.email ||
+    'Customer'
+
   return (
     <main className="container">
       <h2>Customer Dashboard</h2>
@@ -466,7 +476,7 @@ function Customer() {
 
       {me && (
         <p>
-          Welcome, <b>{me.companyName}</b>
+          Welcome, <b>{welcomeName}</b>
         </p>
       )}
 
@@ -485,44 +495,55 @@ function Customer() {
       <h3>Order History</h3>
 
       <div className="table">
-        {orders.map(o => (
-          <div className="tr" key={o.id}>
-            <span>{o.orderNumber}</span>
-            <span>{o.status}</span>
-            <span>
-              ₹ {Number(o.totalAmount || 0).toFixed(2)}
-            </span>
-            <span>
-              {o.trackingNumber || '-'}
-            </span>
-          </div>
-        ))}
+        {orders.length === 0 ? (
+          <p>No orders yet.</p>
+        ) : (
+          orders.map(o => (
+            <div className="tr" key={o.id}>
+              <span>{o.orderNumber}</span>
+
+              <span>{o.status}</span>
+
+              <span>
+                ₹ {Number(o.totalAmount || 0).toFixed(2)}
+              </span>
+
+              <span>
+                {o.trackingNumber || '-'}
+              </span>
+            </div>
+          ))
+        )}
       </div>
 
       <h3>Invoices</h3>
 
       <div className="table">
-        {invoices.map(i => (
-          <div className="tr" key={i.id}>
-            <span>{i.invoiceNumber}</span>
+        {invoices.length === 0 ? (
+          <p>No invoices yet.</p>
+        ) : (
+          invoices.map(i => (
+            <div className="tr" key={i.id}>
+              <span>{i.invoiceNumber}</span>
 
-            <span>
-              ₹ {Number(i.amount || 0).toFixed(2)}
-            </span>
+              <span>
+                ₹ {Number(i.amount || 0).toFixed(2)}
+              </span>
 
-            <span>
-              Outstanding ₹ {Number(i.outstanding || 0).toFixed(2)}
-            </span>
+              <span>
+                Outstanding ₹ {Number(i.outstanding || 0).toFixed(2)}
+              </span>
 
-            <a
-              href={`https://chromacore-business-portal-1.onrender.com/api/customer/invoices/${i.id}/pdf`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              PDF
-            </a>
-          </div>
-        ))}
+              <a
+                href={`https://chromacore-business-portal-1.onrender.com/api/customer/invoices/${i.id}/pdf`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                PDF
+              </a>
+            </div>
+          ))
+        )}
       </div>
     </main>
   )
