@@ -76,10 +76,24 @@ function Home() {
   )
 }
 
+/* ============================================================
+   PRODUCTS + CUSTOMER CART
+   ============================================================ */
+
 function Products() {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  const [cart, setCart] = useState([])
+  const [shippingAddress, setShippingAddress] = useState('')
+  const [placingOrder, setPlacingOrder] = useState(false)
+  const [orderMessage, setOrderMessage] = useState('')
+  const [orderError, setOrderError] = useState('')
+
+  const token = localStorage.getItem('cc_token')
+  const role = localStorage.getItem('cc_role')
+  const isCustomer = token && role === 'CUSTOMER'
 
   useEffect(() => {
     let active = true
@@ -116,6 +130,166 @@ function Products() {
     }
   }, [])
 
+  function addToCart(product) {
+    setOrderMessage('')
+    setOrderError('')
+
+    setCart(current => {
+      const existing = current.find(
+        item => item.product.id === product.id
+      )
+
+      if (existing) {
+        return current.map(item =>
+          item.product.id === product.id
+            ? {
+                ...item,
+                quantity: item.quantity + 1
+              }
+            : item
+        )
+      }
+
+      return [
+        ...current,
+        {
+          product,
+          quantity: 1
+        }
+      ]
+    })
+  }
+
+  function updateCartQuantity(productId, quantity) {
+    const q = Number(quantity)
+
+    if (!q || q <= 0) {
+      setCart(current =>
+        current.filter(
+          item => item.product.id !== productId
+        )
+      )
+      return
+    }
+
+    setCart(current =>
+      current.map(item =>
+        item.product.id === productId
+          ? {
+              ...item,
+              quantity: q
+            }
+          : item
+      )
+    )
+  }
+
+  function removeFromCart(productId) {
+    setCart(current =>
+      current.filter(
+        item => item.product.id !== productId
+      )
+    )
+  }
+
+  function productPrice(product) {
+    return Number(product.price || 0)
+  }
+
+  const cartTotal = cart.reduce(
+    (sum, item) =>
+      sum +
+      productPrice(item.product) *
+        Number(item.quantity || 0),
+    0
+  )
+
+  async function placeOrder() {
+    setOrderMessage('')
+    setOrderError('')
+
+    if (!isCustomer) {
+      setOrderError(
+        'Please login with a customer account before placing an order.'
+      )
+      return
+    }
+
+    if (cart.length === 0) {
+      setOrderError(
+        'Please add at least one product to your cart.'
+      )
+      return
+    }
+
+    if (!shippingAddress.trim()) {
+      setOrderError(
+        'Please enter the shipping address.'
+      )
+      return
+    }
+
+    for (const item of cart) {
+      const available = Number(
+        item.product.availableQuantity ??
+        item.product.stockQuantity ??
+        0
+      )
+
+      if (
+        available > 0 &&
+        Number(item.quantity) > available
+      ) {
+        setOrderError(
+          `Insufficient stock for ${item.product.name}. Available: ${available}`
+        )
+        return
+      }
+    }
+
+    setPlacingOrder(true)
+
+    try {
+      const payload = {
+        shippingAddress: shippingAddress.trim(),
+        items: cart.map(item => ({
+          productId: item.product.id,
+          quantity: Number(item.quantity)
+        }))
+      }
+
+      console.log('Create order payload:', payload)
+
+      const r = await api.post('/orders', payload)
+
+      console.log('Create order response:', r.data)
+
+      setCart([])
+      setShippingAddress('')
+
+      setOrderMessage(
+        `Order ${r.data?.orderNumber || ''} placed successfully.`
+      )
+
+      // Refresh products because stock has now been reserved.
+      const productsResponse =
+        await api.get('/products/public')
+
+      setProducts(productsResponse.data)
+    } catch (e) {
+      console.error('Create order error:', e)
+
+      setOrderError(
+        e.response?.data?.message ||
+        e.response?.data ||
+        e.message ||
+        'Failed to place order'
+      )
+    } finally {
+      setPlacingOrder(false)
+    }
+  }
+
   return (
     <main className="container">
       <h2>Products</h2>
@@ -132,14 +306,145 @@ function Products() {
         <p>No products available.</p>
       )}
 
+      {isCustomer && (
+        <section className="card">
+          <h3>Shopping Cart</h3>
+
+          {cart.length === 0 ? (
+            <p>Your cart is empty.</p>
+          ) : (
+            <>
+              <div className="table">
+                {cart.map(item => (
+                  <div
+                    className="tr"
+                    key={item.product.id}
+                  >
+                    <span>
+                      <b>{item.product.name}</b>
+                      <br />
+                      {item.product.code}
+                    </span>
+
+                    <span>
+                      ₹ {productPrice(item.product).toFixed(2)}
+                    </span>
+
+                    <input
+                      type="number"
+                      min="1"
+                      value={item.quantity}
+                      onChange={e =>
+                        updateCartQuantity(
+                          item.product.id,
+                          e.target.value
+                        )
+                      }
+                    />
+
+                    <span>
+                      ₹{' '}
+                      {(
+                        productPrice(item.product) *
+                        Number(item.quantity || 0)
+                      ).toFixed(2)}
+                    </span>
+
+                    <button
+                      type="button"
+                      className="linkbtn"
+                      onClick={() =>
+                        removeFromCart(item.product.id)
+                      }
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <h3>
+                Total: ₹ {cartTotal.toFixed(2)}
+              </h3>
+
+              <textarea
+                placeholder="Shipping address"
+                value={shippingAddress}
+                onChange={e =>
+                  setShippingAddress(e.target.value)
+                }
+                rows="4"
+              />
+
+              {orderError && (
+                <div className="error">
+                  {orderError}
+                </div>
+              )}
+
+              {orderMessage && (
+                <div className="success">
+                  {orderMessage}
+                </div>
+              )}
+
+              <button
+                type="button"
+                className="button"
+                onClick={placeOrder}
+                disabled={placingOrder}
+              >
+                {placingOrder
+                  ? 'Placing Order...'
+                  : 'Place Order'}
+              </button>
+            </>
+          )}
+
+          {cart.length === 0 && (
+            <>
+              {orderError && (
+                <div className="error">
+                  {orderError}
+                </div>
+              )}
+
+              {orderMessage && (
+                <div className="success">
+                  {orderMessage}
+                </div>
+              )}
+            </>
+          )}
+        </section>
+      )}
+
+      {!isCustomer && (
+        <div className="card">
+          <p>
+            Login as a customer to add products to your cart
+            and place orders.
+          </p>
+
+          <Link className="button" to="/login">
+            Customer Login
+          </Link>
+        </div>
+      )}
+
       <div className="grid">
         {products.map(p => (
           <div className="card" key={p.id}>
             <div className="productimg">
               {p.imageUrl ? (
-                <img src={p.imageUrl} alt={p.name} />
+                <img
+                  src={p.imageUrl}
+                  alt={p.name}
+                />
               ) : (
-                <span>{p.shade || 'CHEMICAL'}</span>
+                <span>
+                  {p.shade || 'CHEMICAL'}
+                </span>
               )}
             </div>
 
@@ -150,14 +455,53 @@ function Products() {
             </p>
 
             <p>
-              {p.description || 'B2B dye/chemical product.'}
+              {p.description ||
+                'B2B dye/chemical product.'}
+            </p>
+
+            <p>
+              Price:{' '}
+              <b>
+                ₹ {productPrice(p).toFixed(2)}
+              </b>
+            </p>
+
+            <p>
+              Available:{' '}
+              <b>
+                {p.availableQuantity ??
+                  p.stockQuantity ??
+                  0}
+              </b>
             </p>
 
             <span
-              className={`status ${p.status?.toLowerCase() || ''}`}
+              className={`status ${
+                p.status?.toLowerCase() || ''
+              }`}
             >
               {p.status?.replace('_', ' ')}
             </span>
+
+            {isCustomer && (
+              <button
+                type="button"
+                className="button"
+                disabled={
+                  p.status !== 'AVAILABLE' ||
+                  Number(
+                    p.availableQuantity ??
+                    p.stockQuantity ??
+                    0
+                  ) <= 0
+                }
+                onClick={() =>
+                  addToCart(p)
+                }
+              >
+                Add to Cart
+              </button>
+            )}
           </div>
         ))}
       </div>
@@ -239,7 +583,9 @@ function Shades() {
             </p>
 
             <span
-              className={`status ${s.product?.status?.toLowerCase() || ''}`}
+              className={`status ${
+                s.product?.status?.toLowerCase() || ''
+              }`}
             >
               {s.product?.status?.replace('_', ' ') || '-'}
             </span>
@@ -264,10 +610,20 @@ function Login() {
     setErr('')
 
     try {
-      const r = await api.post('/auth/login', form)
+      const r = await api.post(
+        '/auth/login',
+        form
+      )
 
-      localStorage.setItem('cc_token', r.data.token)
-      localStorage.setItem('cc_role', r.data.role)
+      localStorage.setItem(
+        'cc_token',
+        r.data.token
+      )
+
+      localStorage.setItem(
+        'cc_role',
+        r.data.role
+      )
 
       nav(
         r.data.role === 'ADMIN'
@@ -284,7 +640,10 @@ function Login() {
 
   return (
     <main className="auth">
-      <form className="card" onSubmit={submit}>
+      <form
+        className="card"
+        onSubmit={submit}
+      >
         <h2>Login</h2>
 
         <input
@@ -354,10 +713,20 @@ function Register() {
     setErr('')
 
     try {
-      const r = await api.post('/auth/register', form)
+      const r = await api.post(
+        '/auth/register',
+        form
+      )
 
-      localStorage.setItem('cc_token', r.data.token)
-      localStorage.setItem('cc_role', r.data.role)
+      localStorage.setItem(
+        'cc_token',
+        r.data.token
+      )
+
+      localStorage.setItem(
+        'cc_role',
+        r.data.role
+      )
 
       nav('/customer')
     } catch (e) {
@@ -431,16 +800,30 @@ function Customer() {
         ])
 
         if (active) {
-          console.log('Customer profile:', a.data)
-          console.log('Customer orders:', b.data)
-          console.log('Customer invoices:', c.data)
+          console.log(
+            'Customer profile:',
+            a.data
+          )
+
+          console.log(
+            'Customer orders:',
+            b.data
+          )
+
+          console.log(
+            'Customer invoices:',
+            c.data
+          )
 
           setMe(a.data)
           setOrders(b.data)
           setInvoices(c.data)
         }
       } catch (e) {
-        console.error('Customer API error:', e)
+        console.error(
+          'Customer API error:',
+          e
+        )
 
         if (active) {
           setError(
@@ -499,13 +882,23 @@ function Customer() {
           <p>No orders yet.</p>
         ) : (
           orders.map(o => (
-            <div className="tr" key={o.id}>
-              <span>{o.orderNumber}</span>
-
-              <span>{o.status}</span>
+            <div
+              className="tr"
+              key={o.id}
+            >
+              <span>
+                {o.orderNumber}
+              </span>
 
               <span>
-                ₹ {Number(o.totalAmount || 0).toFixed(2)}
+                {o.status}
+              </span>
+
+              <span>
+                ₹{' '}
+                {Number(
+                  o.totalAmount || 0
+                ).toFixed(2)}
               </span>
 
               <span>
@@ -523,15 +916,26 @@ function Customer() {
           <p>No invoices yet.</p>
         ) : (
           invoices.map(i => (
-            <div className="tr" key={i.id}>
-              <span>{i.invoiceNumber}</span>
-
+            <div
+              className="tr"
+              key={i.id}
+            >
               <span>
-                ₹ {Number(i.amount || 0).toFixed(2)}
+                {i.invoiceNumber}
               </span>
 
               <span>
-                Outstanding ₹ {Number(i.outstanding || 0).toFixed(2)}
+                ₹{' '}
+                {Number(
+                  i.amount || 0
+                ).toFixed(2)}
+              </span>
+
+              <span>
+                Outstanding ₹{' '}
+                {Number(
+                  i.outstanding || 0
+                ).toFixed(2)}
               </span>
 
               <a
@@ -554,13 +958,23 @@ function Admin() {
   const [orders, setOrders] = useState([])
   const [customers, setCustomers] = useState([])
 
-  const [loadingProducts, setLoadingProducts] = useState(true)
-  const [loadingOrders, setLoadingOrders] = useState(true)
-  const [loadingCustomers, setLoadingCustomers] = useState(true)
+  const [loadingProducts, setLoadingProducts] =
+    useState(true)
 
-  const [productError, setProductError] = useState('')
-  const [orderError, setOrderError] = useState('')
-  const [customerError, setCustomerError] = useState('')
+  const [loadingOrders, setLoadingOrders] =
+    useState(true)
+
+  const [loadingCustomers, setLoadingCustomers] =
+    useState(true)
+
+  const [productError, setProductError] =
+    useState('')
+
+  const [orderError, setOrderError] =
+    useState('')
+
+  const [customerError, setCustomerError] =
+    useState('')
 
   const [newP, setNewP] = useState({
     code: '',
@@ -582,11 +996,20 @@ function Admin() {
     setProductError('')
 
     try {
-      const r = await api.get('/admin/products')
-      console.log('Admin products API:', r.data)
+      const r =
+        await api.get('/admin/products')
+
+      console.log(
+        'Admin products API:',
+        r.data
+      )
+
       setProducts(r.data)
     } catch (e) {
-      console.error('Admin products API error:', e)
+      console.error(
+        'Admin products API error:',
+        e
+      )
 
       setProductError(
         e.response?.data?.message ||
@@ -603,10 +1026,15 @@ function Admin() {
     setOrderError('')
 
     try {
-      const r = await api.get('/admin/orders')
+      const r =
+        await api.get('/admin/orders')
+
       setOrders(r.data)
     } catch (e) {
-      console.error('Admin orders API error:', e)
+      console.error(
+        'Admin orders API error:',
+        e
+      )
 
       setOrderError(
         e.response?.data?.message ||
@@ -623,10 +1051,15 @@ function Admin() {
     setCustomerError('')
 
     try {
-      const r = await api.get('/admin/customers')
+      const r =
+        await api.get('/admin/customers')
+
       setCustomers(r.data)
     } catch (e) {
-      console.error('Admin customers API error:', e)
+      console.error(
+        'Admin customers API error:',
+        e
+      )
 
       setCustomerError(
         e.response?.data?.message ||
@@ -661,13 +1094,24 @@ function Admin() {
     e.preventDefault()
 
     try {
-      await api.post('/admin/products', {
-        ...newP,
-        stockQuantity: Number(newP.stockQuantity),
-        minimumStock: Number(newP.minimumStock)
-      })
+      await api.post(
+        '/admin/products',
+        {
+          ...newP,
+          stockQuantity:
+            Number(
+              newP.stockQuantity
+            ),
+          minimumStock:
+            Number(
+              newP.minimumStock
+            )
+        }
+      )
 
-      alert('Product added successfully')
+      alert(
+        'Product added successfully'
+      )
 
       setNewP({
         code: '',
@@ -684,7 +1128,10 @@ function Admin() {
 
       await loadProducts()
     } catch (e) {
-      console.error('Add product error:', e)
+      console.error(
+        'Add product error:',
+        e
+      )
 
       alert(
         e.response?.data?.message ||
@@ -699,7 +1146,9 @@ function Admin() {
     )
 
     if (!q || q <= 0) {
-      alert('Enter a valid quantity')
+      alert(
+        'Enter a valid quantity'
+      )
       return
     }
 
@@ -709,7 +1158,11 @@ function Admin() {
 
     try {
       await api.post(
-        `/admin/products/${id}/stock/${delta > 0 ? 'add' : 'remove'}`,
+        `/admin/products/${id}/stock/${
+          delta > 0
+            ? 'add'
+            : 'remove'
+        }`,
         {
           quantity: q,
           reason
@@ -729,7 +1182,10 @@ function Admin() {
 
       await loadProducts()
     } catch (e) {
-      console.error('Stock adjustment error:', e)
+      console.error(
+        'Stock adjustment error:',
+        e
+      )
 
       alert(
         e.response?.data?.message ||
@@ -739,7 +1195,11 @@ function Admin() {
   }
 
   async function deactivate(id) {
-    if (!confirm('Deactivate this product?')) {
+    if (
+      !confirm(
+        'Deactivate this product?'
+      )
+    ) {
       return
     }
 
@@ -748,11 +1208,16 @@ function Admin() {
         `/admin/products/${id}`
       )
 
-      alert('Product deactivated successfully')
+      alert(
+        'Product deactivated successfully'
+      )
 
       await loadProducts()
     } catch (e) {
-      console.error('Deactivate product error:', e)
+      console.error(
+        'Deactivate product error:',
+        e
+      )
 
       alert(
         e.response?.data?.message ||
@@ -761,7 +1226,10 @@ function Admin() {
     }
   }
 
-  async function updateStatus(id, status) {
+  async function updateStatus(
+    id,
+    status
+  ) {
     try {
       await api.put(
         `/admin/orders/${id}/status`,
@@ -770,7 +1238,10 @@ function Admin() {
 
       await loadOrders()
     } catch (e) {
-      console.error('Order status update error:', e)
+      console.error(
+        'Order status update error:',
+        e
+      )
 
       alert(
         e.response?.data?.message ||
@@ -824,14 +1295,20 @@ function Admin() {
             <input
               key={k}
               type={
-                ['stockQuantity', 'minimumStock'].includes(k)
+                [
+                  'stockQuantity',
+                  'minimumStock'
+                ].includes(k)
                   ? 'number'
                   : 'text'
               }
               placeholder={k}
               value={newP[k]}
               onChange={e =>
-                setP(k, e.target.value)
+                setP(
+                  k,
+                  e.target.value
+                )
               }
               required={[
                 'code',
@@ -840,17 +1317,24 @@ function Admin() {
             />
           ))}
 
-          <button className="button" type="submit">
+          <button
+            className="button"
+            type="submit"
+          >
             Add Product
           </button>
         </form>
       </section>
 
       <section>
-        <h3>Product & Stock Management</h3>
+        <h3>
+          Product & Stock Management
+        </h3>
 
         {loadingProducts && (
-          <p>Loading products...</p>
+          <p>
+            Loading products...
+          </p>
         )}
 
         {productError && (
@@ -862,12 +1346,17 @@ function Admin() {
         {!loadingProducts &&
           !productError &&
           products.length === 0 && (
-            <p>No products found.</p>
+            <p>
+              No products found.
+            </p>
           )}
 
         <div className="grid">
           {products.map(p => (
-            <div className="card" key={p.id}>
+            <div
+              className="card"
+              key={p.id}
+            >
               <h3>{p.name}</h3>
 
               <p>
@@ -875,17 +1364,32 @@ function Admin() {
               </p>
 
               <p>
-                Stock: <b>{p.stockQuantity}</b>
+                Stock:{' '}
+                <b>
+                  {p.stockQuantity}
+                </b>
                 {' | '}
-                Reserved: <b>{p.reservedQuantity}</b>
+                Reserved:{' '}
+                <b>
+                  {p.reservedQuantity}
+                </b>
                 {' | '}
-                Available: <b>{p.availableQuantity}</b>
+                Available:{' '}
+                <b>
+                  {p.availableQuantity}
+                </b>
               </p>
 
               <span
-                className={`status ${p.status?.toLowerCase() || ''}`}
+                className={`status ${
+                  p.status?.toLowerCase() ||
+                  ''
+                }`}
               >
-                {p.status?.replace('_', ' ')}
+                {p.status?.replace(
+                  '_',
+                  ' '
+                )}
               </span>
 
               <input
@@ -893,14 +1397,16 @@ function Admin() {
                 min="1"
                 placeholder="Quantity"
                 value={
-                  stock[p.id]?.quantity || ''
+                  stock[p.id]
+                    ?.quantity || ''
                 }
                 onChange={e =>
                   setStock({
                     ...stock,
                     [p.id]: {
                       ...stock[p.id],
-                      quantity: e.target.value
+                      quantity:
+                        e.target.value
                     }
                   })
                 }
@@ -909,14 +1415,16 @@ function Admin() {
               <input
                 placeholder="Reason"
                 value={
-                  stock[p.id]?.reason || ''
+                  stock[p.id]
+                    ?.reason || ''
                 }
                 onChange={e =>
                   setStock({
                     ...stock,
                     [p.id]: {
                       ...stock[p.id],
-                      reason: e.target.value
+                      reason:
+                        e.target.value
                     }
                   })
                 }
@@ -927,7 +1435,10 @@ function Admin() {
                   type="button"
                   className="button"
                   onClick={() =>
-                    adjust(p.id, 1)
+                    adjust(
+                      p.id,
+                      1
+                    )
                   }
                 >
                   + Add Stock
@@ -937,7 +1448,10 @@ function Admin() {
                   type="button"
                   className="button danger"
                   onClick={() =>
-                    adjust(p.id, -1)
+                    adjust(
+                      p.id,
+                      -1
+                    )
                   }
                 >
                   − Remove Stock
@@ -947,7 +1461,9 @@ function Admin() {
                   type="button"
                   className="linkbtn"
                   onClick={() =>
-                    deactivate(p.id)
+                    deactivate(
+                      p.id
+                    )
                   }
                 >
                   Deactivate
@@ -962,7 +1478,9 @@ function Admin() {
         <h3>Orders</h3>
 
         {loadingOrders && (
-          <p>Loading orders...</p>
+          <p>
+            Loading orders...
+          </p>
         )}
 
         {orderError && (
@@ -974,22 +1492,31 @@ function Admin() {
         {!loadingOrders &&
           !orderError &&
           orders.length === 0 && (
-            <p>No orders yet.</p>
+            <p>
+              No orders yet.
+            </p>
           )}
 
         <div className="table">
           {orders.map(o => (
-            <div className="tr" key={o.id}>
+            <div
+              className="tr"
+              key={o.id}
+            >
               <span>
                 {o.orderNumber}
               </span>
 
               <span>
-                {o.customer?.companyName || '-'}
+                {o.customer
+                  ?.companyName || '-'}
               </span>
 
               <span>
-                ₹ {Number(o.totalAmount || 0).toFixed(2)}
+                ₹{' '}
+                {Number(
+                  o.totalAmount || 0
+                ).toFixed(2)}
               </span>
 
               <select
@@ -1011,7 +1538,10 @@ function Admin() {
                   'DELIVERED',
                   'CANCELLED'
                 ].map(s => (
-                  <option key={s} value={s}>
+                  <option
+                    key={s}
+                    value={s}
+                  >
                     {s}
                   </option>
                 ))}
@@ -1025,7 +1555,9 @@ function Admin() {
         <h3>Customers</h3>
 
         {loadingCustomers && (
-          <p>Loading customers...</p>
+          <p>
+            Loading customers...
+          </p>
         )}
 
         {customerError && (
@@ -1037,7 +1569,9 @@ function Admin() {
         {!loadingCustomers &&
           !customerError &&
           customers.length === 0 && (
-            <p>No customers yet.</p>
+            <p>
+              No customers yet.
+            </p>
           )}
       </section>
     </main>
