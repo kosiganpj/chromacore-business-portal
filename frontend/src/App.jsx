@@ -160,13 +160,24 @@ function Products() {
 
     const available = getAvailableQuantity(product)
 
+    if (available <= 0) {
+      setOrderError(
+        `${product.name} is currently out of stock.`
+      )
+      return
+    }
+
     setCart(current => {
       const existing = current.find(
         item => item.product.id === product.id
       )
 
       if (existing) {
-        if (existing.quantity >= available) {
+        const currentQuantity = Number(
+          existing.quantity
+        ) || 0
+
+        if (currentQuantity >= available) {
           setOrderError(
             `Maximum available quantity for ${product.name} is ${available}.`
           )
@@ -178,18 +189,10 @@ function Products() {
           item.product.id === product.id
             ? {
                 ...item,
-                quantity: Number(item.quantity) + 1
+                quantity: currentQuantity + 1
               }
             : item
         )
-      }
-
-      if (available <= 0) {
-        setOrderError(
-          `${product.name} is currently out of stock.`
-        )
-
-        return current
       }
 
       return [
@@ -202,16 +205,24 @@ function Products() {
     })
   }
 
+  /*
+    IMPORTANT CART QUANTITY BEHAVIOR
+
+    The quantity input must NEVER remove the product.
+
+    Example:
+
+    1 -> Backspace -> empty -> type 3
+
+    The product stays in the cart while the customer
+    edits the number.
+
+    The ONLY way to remove a product is the Remove button.
+  */
+
   function updateCartQuantity(productId, quantity) {
-    /*
-      IMPORTANT:
-      Do not convert an empty input to zero.
-
-      When the customer presses Backspace,
-      quantity can temporarily be "" while typing.
-      The item remains in the cart.
-    */
-
+    // Allow the input to temporarily become empty.
+    // DO NOT remove the cart item.
     if (quantity === '') {
       setCart(current =>
         current.map(item =>
@@ -233,10 +244,17 @@ function Products() {
       return
     }
 
+    // Never remove the product because of quantity editing.
+    // If 0 is entered, keep the item and restore 1.
     if (q <= 0) {
       setCart(current =>
-        current.filter(
-          item => item.product.id !== productId
+        current.map(item =>
+          item.product.id === productId
+            ? {
+                ...item,
+                quantity: 1
+              }
+            : item
         )
       )
 
@@ -253,18 +271,19 @@ function Products() {
           item.product
         )
 
-        if (q > available) {
-          setOrderError(
-            `Maximum available quantity for ${item.product.name} is ${available}.`
-          )
+        if (available <= 0) {
+          return {
+            ...item,
+            quantity: 1
+          }
+        }
 
+        if (q > available) {
           return {
             ...item,
             quantity: available
           }
         }
-
-        setOrderError('')
 
         return {
           ...item,
@@ -288,17 +307,14 @@ function Products() {
         item.product
       )
 
+      if (available <= 0) {
+        return current
+      }
+
       let q = Number(item.quantity)
 
       if (!Number.isFinite(q) || q <= 0) {
         q = 1
-      }
-
-      if (available <= 0) {
-        return current.filter(
-          cartItem =>
-            cartItem.product.id !== productId
-        )
       }
 
       if (q > available) {
@@ -332,7 +348,10 @@ function Products() {
     (sum, item) => {
       const quantity = Number(item.quantity)
 
-      if (!Number.isFinite(quantity) || quantity <= 0) {
+      if (
+        !Number.isFinite(quantity) ||
+        quantity <= 0
+      ) {
         return sum
       }
 
