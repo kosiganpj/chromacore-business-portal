@@ -1,4 +1,3 @@
-
 package com.chromacore.portal.controller;
 
 import com.chromacore.portal.dto.OrderDtos;
@@ -80,9 +79,12 @@ public class OrderController {
                     .body("Authentication is required.");
         }
 
-        AppUser customer = userRepository
-                .findByEmailIgnoreCase(authentication.getName())
-                .orElse(null);
+        AppUser customer =
+                userRepository
+                        .findByEmailIgnoreCase(
+                                authentication.getName()
+                        )
+                        .orElse(null);
 
         if (customer == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -120,13 +122,19 @@ public class OrderController {
             Long productId = entry.getKey();
             double quantity = entry.getValue();
 
-            Product product = productRepository
-                    .findById(productId)
-                    .orElse(null);
+            Product product =
+                    productRepository
+                            .findById(productId)
+                            .orElse(null);
 
             if (product == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body("Product not found: " + productId);
+                return ResponseEntity.status(
+                                HttpStatus.NOT_FOUND
+                        )
+                        .body(
+                                "Product not found: "
+                                        + productId
+                        );
             }
 
             if (!product.isActive()) {
@@ -150,32 +158,39 @@ public class OrderController {
                         );
             }
 
-            productsById.put(productId, product);
+            productsById.put(
+                    productId,
+                    product
+            );
         }
 
         CustomerOrder order =
                 new CustomerOrder();
 
         order.setCustomer(customer);
+
         order.setShippingAddress(
                 request.shippingAddress()
         );
+
         order.setStatus(
                 OrderStatus.PLACED
         );
+
         order.setCreatedAt(
                 Instant.now()
         );
+
         order.setUpdatedAt(
                 Instant.now()
         );
 
         order.setOrderNumber(
-                "CC-ORD-" +
-                        UUID.randomUUID()
-                                .toString()
-                                .substring(0, 8)
-                                .toUpperCase()
+                "CC-ORD-"
+                        + UUID.randomUUID()
+                        .toString()
+                        .substring(0, 8)
+                        .toUpperCase()
         );
 
         double total = 0;
@@ -206,7 +221,9 @@ public class OrderController {
                     new OrderItem();
 
             orderItem.setOrder(order);
+
             orderItem.setProduct(product);
+
             orderItem.setQuantity(quantity);
 
             orderItem.setUnitPrice(
@@ -226,56 +243,88 @@ public class OrderController {
         CustomerOrder saved =
                 orderRepository.save(order);
 
-        // Create invoice automatically for the new order.
-        Invoice invoice = new Invoice();
+        /*
+         * Create invoice automatically.
+         */
+        Invoice invoice =
+                new Invoice();
 
         invoice.setInvoiceNumber(
-                "CC-INV-" +
-                        UUID.randomUUID()
-                                .toString()
-                                .substring(0, 8)
-                                .toUpperCase()
+                "CC-INV-"
+                        + UUID.randomUUID()
+                        .toString()
+                        .substring(0, 8)
+                        .toUpperCase()
         );
 
         invoice.setOrder(saved);
+
         invoice.setCustomer(customer);
-        invoice.setAmount(saved.getTotalAmount());
+
+        invoice.setAmount(
+                saved.getTotalAmount()
+        );
+
         invoice.setPaidAmount(0);
-        invoice.setIssuedAt(Instant.now());
+
+        invoice.setIssuedAt(
+                Instant.now()
+        );
 
         invoiceRepository.save(invoice);
 
-        // Send order confirmation email.
+        /*
+         * Send order confirmation email asynchronously.
+         *
+         * NotificationService.email() is @Async,
+         * so the customer does not have to wait for
+         * Gmail SMTP to respond.
+         */
         notificationService.email(
                 customer.getEmail(),
+
                 "ChromaCore Order Confirmation - "
                         + saved.getOrderNumber(),
+
                 "Dear "
                         + (
-                                customer.getCompanyName() != null &&
-                                !customer.getCompanyName().isBlank()
-                                        ? customer.getCompanyName()
-                                        : customer.getEmail()
+                                customer.getCompanyName() != null
+                                        && !customer
+                                        .getCompanyName()
+                                        .isBlank()
+                                ? customer.getCompanyName()
+                                : customer.getEmail()
                         )
                         + ",\n\n"
+
                         + "Thank you for your order with "
-                        + "ChromaCore Dyes & Chemicals.\n\n"
+                        + "ChromaCore Dyes & Chemicals."
+                        + "\n\n"
+
                         + "Order Number: "
                         + saved.getOrderNumber()
                         + "\n"
+
                         + "Invoice Number: "
                         + invoice.getInvoiceNumber()
                         + "\n"
+
                         + String.format(
                                 "Order Total: ₹%.2f%n",
                                 saved.getTotalAmount()
                         )
+
                         + "Order Status: "
                         + saved.getStatus()
                         + "\n\n"
+
                         + "Your invoice is available in the "
-                        + "ChromaCore customer portal.\n\n"
-                        + "Thank you for your business.\n\n"
+                        + "ChromaCore customer portal."
+                        + "\n\n"
+
+                        + "Thank you for your business."
+                        + "\n\n"
+
                         + "ChromaCore Dyes & Chemicals"
         );
 
@@ -285,7 +334,10 @@ public class OrderController {
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<CustomerOrder>> getAllOrders() {
-        return ResponseEntity.ok(orderRepository.findAll());
+
+        return ResponseEntity.ok(
+                orderRepository.findAll()
+        );
     }
 
     @GetMapping("/{id}")
@@ -294,29 +346,48 @@ public class OrderController {
             @PathVariable Long id,
             Authentication authentication
     ) {
+
         CustomerOrder order =
-                orderRepository.findById(id).orElse(null);
+                orderRepository
+                        .findById(id)
+                        .orElse(null);
 
         if (order == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Order not found: " + id);
+            return ResponseEntity.status(
+                            HttpStatus.NOT_FOUND
+                    )
+                    .body(
+                            "Order not found: "
+                                    + id
+                    );
         }
 
         boolean admin =
-                authentication.getAuthorities()
+                authentication
+                        .getAuthorities()
                         .stream()
-                        .anyMatch(a -> a.getAuthority()
-                                .equals("ROLE_ADMIN"));
+                        .anyMatch(
+                                a ->
+                                        a.getAuthority()
+                                                .equals("ROLE_ADMIN")
+                        );
 
         boolean owner =
-                order.getCustomer() != null &&
-                order.getCustomer().getEmail() != null &&
-                order.getCustomer().getEmail()
-                        .equalsIgnoreCase(authentication.getName());
+                order.getCustomer() != null
+                        && order.getCustomer().getEmail() != null
+                        && order.getCustomer()
+                        .getEmail()
+                        .equalsIgnoreCase(
+                                authentication.getName()
+                        );
 
         if (!admin && !owner) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("You are not allowed to view this order.");
+            return ResponseEntity.status(
+                            HttpStatus.FORBIDDEN
+                    )
+                    .body(
+                            "You are not allowed to view this order."
+                    );
         }
 
         return ResponseEntity.ok(order);
@@ -328,30 +399,46 @@ public class OrderController {
             @PathVariable Long customerId,
             Authentication authentication
     ) {
+
         boolean admin =
-                authentication.getAuthorities()
+                authentication
+                        .getAuthorities()
                         .stream()
-                        .anyMatch(a -> a.getAuthority()
-                                .equals("ROLE_ADMIN"));
+                        .anyMatch(
+                                a ->
+                                        a.getAuthority()
+                                                .equals("ROLE_ADMIN")
+                        );
 
         AppUser authenticatedUser =
                 userRepository
-                        .findByEmailIgnoreCase(authentication.getName())
+                        .findByEmailIgnoreCase(
+                                authentication.getName()
+                        )
                         .orElse(null);
 
         if (!admin &&
-                (authenticatedUser == null ||
-                        !authenticatedUser.getId()
-                                .equals(customerId))) {
+                (
+                        authenticatedUser == null
+                                || !authenticatedUser
+                                .getId()
+                                .equals(customerId)
+                )
+        ) {
 
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("You are not allowed to view these orders.");
+            return ResponseEntity.status(
+                            HttpStatus.FORBIDDEN
+                    )
+                    .body(
+                            "You are not allowed to view these orders."
+                    );
         }
 
         return ResponseEntity.ok(
-                orderRepository.findByCustomerIdOrderByCreatedAtDesc(
-                        customerId
-                )
+                orderRepository
+                        .findByCustomerIdOrderByCreatedAtDesc(
+                                customerId
+                        )
         );
     }
 
@@ -362,12 +449,20 @@ public class OrderController {
             @PathVariable Long id,
             @RequestBody OrderDtos.StatusUpdateRequest request
     ) {
+
         CustomerOrder order =
-                orderRepository.findById(id).orElse(null);
+                orderRepository
+                        .findById(id)
+                        .orElse(null);
 
         if (order == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Order not found: " + id);
+            return ResponseEntity.status(
+                            HttpStatus.NOT_FOUND
+                    )
+                    .body(
+                            "Order not found: "
+                                    + id
+                    );
         }
 
         if (request == null ||
@@ -378,28 +473,46 @@ public class OrderController {
                     .body("Status is required.");
         }
 
-        OrderStatus oldStatus = order.getStatus();
+        OrderStatus oldStatus =
+                order.getStatus();
+
         OrderStatus newStatus;
 
         try {
-            newStatus = OrderStatus.valueOf(
-                    request.status().trim().toUpperCase()
-            );
+
+            newStatus =
+                    OrderStatus.valueOf(
+                            request.status()
+                                    .trim()
+                                    .toUpperCase()
+                    );
+
         } catch (IllegalArgumentException e) {
+
             return ResponseEntity.badRequest()
-                    .body("Invalid order status: " + request.status());
+                    .body(
+                            "Invalid order status: "
+                                    + request.status()
+                    );
         }
 
         if (oldStatus == newStatus) {
+
             if (request.trackingNumber() != null) {
-                order.setTrackingNumber(request.trackingNumber());
+                order.setTrackingNumber(
+                        request.trackingNumber()
+                );
             }
 
             if (request.transportName() != null) {
-                order.setTransportName(request.transportName());
+                order.setTransportName(
+                        request.transportName()
+                );
             }
 
-            order.setUpdatedAt(Instant.now());
+            order.setUpdatedAt(
+                    Instant.now()
+            );
 
             return ResponseEntity.ok(
                     orderRepository.save(order)
@@ -407,44 +520,71 @@ public class OrderController {
         }
 
         if (oldStatus == OrderStatus.DELIVERED) {
+
             return ResponseEntity.badRequest()
-                    .body("Delivered orders cannot change status.");
+                    .body(
+                            "Delivered orders cannot change status."
+                    );
         }
 
         if (oldStatus == OrderStatus.CANCELLED) {
+
             return ResponseEntity.badRequest()
-                    .body("Cancelled orders cannot change status.");
+                    .body(
+                            "Cancelled orders cannot change status."
+                    );
         }
 
-        if (!isValidTransition(oldStatus, newStatus)) {
+        if (!isValidTransition(
+                oldStatus,
+                newStatus
+        )) {
+
             return ResponseEntity.badRequest()
                     .body(
                             "Invalid status transition: "
-                                    + oldStatus + " -> " + newStatus
+                                    + oldStatus
+                                    + " -> "
+                                    + newStatus
                     );
         }
 
         if (newStatus == OrderStatus.CANCELLED) {
+
             releaseReservations(order);
-            order.setStatus(OrderStatus.CANCELLED);
+
+            order.setStatus(
+                    OrderStatus.CANCELLED
+            );
 
         } else if (newStatus == OrderStatus.DELIVERED) {
+
             fulfillReservations(order);
-            order.setStatus(OrderStatus.DELIVERED);
+
+            order.setStatus(
+                    OrderStatus.DELIVERED
+            );
 
         } else {
+
             order.setStatus(newStatus);
         }
 
         if (request.trackingNumber() != null) {
-            order.setTrackingNumber(request.trackingNumber());
+            order.setTrackingNumber(
+                    request.trackingNumber()
+            );
         }
 
         if (request.transportName() != null) {
-            order.setTransportName(request.transportName());
+            order.setTransportName(
+                    request.transportName()
+            );
         }
 
-        order.setUpdatedAt(Instant.now());
+        order.setUpdatedAt(
+                Instant.now()
+        );
 
         return ResponseEntity.ok(
                 orderRepository.save(order)
@@ -455,23 +595,24 @@ public class OrderController {
             OrderStatus oldStatus,
             OrderStatus newStatus
     ) {
+
         return switch (oldStatus) {
 
             case PLACED ->
-                    newStatus == OrderStatus.CONFIRMED ||
-                    newStatus == OrderStatus.CANCELLED;
+                    newStatus == OrderStatus.CONFIRMED
+                            || newStatus == OrderStatus.CANCELLED;
 
             case CONFIRMED ->
-                    newStatus == OrderStatus.PROCESSING ||
-                    newStatus == OrderStatus.CANCELLED;
+                    newStatus == OrderStatus.PROCESSING
+                            || newStatus == OrderStatus.CANCELLED;
 
             case PROCESSING ->
-                    newStatus == OrderStatus.PACKED ||
-                    newStatus == OrderStatus.CANCELLED;
+                    newStatus == OrderStatus.PACKED
+                            || newStatus == OrderStatus.CANCELLED;
 
             case PACKED ->
-                    newStatus == OrderStatus.DISPATCHED ||
-                    newStatus == OrderStatus.CANCELLED;
+                    newStatus == OrderStatus.DISPATCHED
+                            || newStatus == OrderStatus.CANCELLED;
 
             case DISPATCHED ->
                     newStatus == OrderStatus.IN_TRANSIT;
@@ -488,7 +629,9 @@ public class OrderController {
     private void releaseReservations(
             CustomerOrder order
     ) {
-        for (OrderItem item : order.getItems()) {
+
+        for (OrderItem item :
+                order.getItems()) {
 
             Product product =
                     item.getProduct();
@@ -519,7 +662,9 @@ public class OrderController {
     private void fulfillReservations(
             CustomerOrder order
     ) {
-        for (OrderItem item : order.getItems()) {
+
+        for (OrderItem item :
+                order.getItems()) {
 
             Product product =
                     item.getProduct();
@@ -527,14 +672,18 @@ public class OrderController {
             double quantity =
                     item.getQuantity();
 
-            if (product.getReservedQuantity() < quantity) {
+            if (product.getReservedQuantity()
+                    < quantity) {
+
                 throw new IllegalStateException(
                         "Reserved stock is insufficient for product "
                                 + product.getCode()
                 );
             }
 
-            if (product.getStockQuantity() < quantity) {
+            if (product.getStockQuantity()
+                    < quantity) {
+
                 throw new IllegalStateException(
                         "Physical stock is insufficient for product "
                                 + product.getCode()
@@ -578,6 +727,7 @@ public class OrderController {
             String reason,
             String email
     ) {
+
         StockMovement movement =
                 new StockMovement();
 
@@ -599,6 +749,7 @@ public class OrderController {
         );
 
         if (email != null) {
+
             userRepository
                     .findByEmailIgnoreCase(email)
                     .ifPresent(
@@ -617,15 +768,21 @@ public class OrderController {
     public ResponseEntity<?> deleteOrder(
             @PathVariable Long id
     ) {
+
         CustomerOrder order =
-                orderRepository.findById(id).orElse(null);
+                orderRepository
+                        .findById(id)
+                        .orElse(null);
 
         if (order == null) {
+
             return ResponseEntity.status(
-                    HttpStatus.NOT_FOUND
-            ).body(
-                    "Order not found: " + id
-            );
+                            HttpStatus.NOT_FOUND
+                    )
+                    .body(
+                            "Order not found: "
+                                    + id
+                    );
         }
 
         if (order.getStatus() != OrderStatus.CANCELLED &&

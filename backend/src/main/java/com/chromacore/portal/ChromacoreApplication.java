@@ -2,10 +2,16 @@ package com.chromacore.portal;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableAsync;
 
 @SpringBootApplication
+@EnableAsync
 public class ChromacoreApplication {
+
     public static void main(String[] args) {
-        SpringApplication.run(ChromacoreApplication.class, args);
+        SpringApplication.run(
+                ChromacoreApplication.class,
+                args
+        );
     }
 }
