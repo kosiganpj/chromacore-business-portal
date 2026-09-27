@@ -328,6 +328,55 @@ public class OrderController {
                         + "ChromaCore Dyes & Chemicals"
         );
 
+        /*
+         * Send order confirmation WhatsApp asynchronously.
+         *
+         * NotificationService.whatsapp() is @Async,
+         * so the customer does not have to wait for
+         * Meta WhatsApp API response.
+         */
+        notificationService.whatsapp(
+                customer.getPhone(),
+
+                "ChromaCore Order Confirmation\n\n"
+
+                        + "Dear "
+                        + (
+                                customer.getCompanyName() != null
+                                        && !customer.getCompanyName().isBlank()
+                                ? customer.getCompanyName()
+                                : customer.getEmail()
+                        )
+                        + ",\n\n"
+
+                        + "Thank you for your order with "
+                        + "ChromaCore Dyes & Chemicals."
+                        + "\n\n"
+
+                        + "Order Number: "
+                        + saved.getOrderNumber()
+                        + "\n"
+
+                        + "Invoice Number: "
+                        + invoice.getInvoiceNumber()
+                        + "\n"
+
+                        + String.format(
+                                "Order Total: ₹%.2f%n",
+                                saved.getTotalAmount()
+                        )
+
+                        + "Order Status: "
+                        + saved.getStatus()
+                        + "\n\n"
+
+                        + "Your invoice is available in the "
+                        + "ChromaCore customer portal."
+                        + "\n\n"
+
+                        + "ChromaCore Dyes & Chemicals"
+        );
+
         return ResponseEntity.ok(saved);
     }
 
