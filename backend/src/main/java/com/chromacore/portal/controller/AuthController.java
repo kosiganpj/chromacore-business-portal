@@ -1,4 +1,3 @@
-
 package com.chromacore.portal.controller;
 
 import com.chromacore.portal.dto.AuthDtos.*;
@@ -94,6 +93,10 @@ public class AuthController {
 
         if (r.companyName() != null) {
             user.setCompanyName(r.companyName().trim());
+        }
+
+        if (r.phone() != null) {
+            user.setPhone(r.phone().trim());
         }
 
         AppUser saved = users.save(user);
