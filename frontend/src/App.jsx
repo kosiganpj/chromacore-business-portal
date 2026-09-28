@@ -91,7 +91,6 @@ function Products() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  // Product search and filtering
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('ALL')
 
@@ -128,7 +127,6 @@ function Products() {
         const r = await api.get('/products/public')
 
         if (active) {
-          console.log('Products API:', r.data)
           setProducts(r.data)
         }
       } catch (e) {
@@ -333,10 +331,6 @@ function Products() {
     return Number(product.price || 0)
   }
 
-  /*
-   * Build category list dynamically from the products
-   * returned by the backend.
-   */
   const categories = [
     'ALL',
     ...new Set(
@@ -346,16 +340,6 @@ function Products() {
     )
   ]
 
-  /*
-   * Search products by:
-   * - product name
-   * - product code
-   * - category
-   * - shade
-   * - application
-   *
-   * Category dropdown can also be used independently.
-   */
   const filteredProducts = products.filter(p => {
     const searchText = search
       .trim()
@@ -463,25 +447,13 @@ function Products() {
         }))
       }
 
-      console.log(
-        'Create order payload:',
-        payload
-      )
-
       const r = await api.post(
         '/orders',
         payload
       )
 
-      console.log(
-        'Create order response:',
-        r.data
-      )
-
       setCart([])
-
       localStorage.removeItem('cc_cart')
-
       setShippingAddress('')
 
       setOrderMessage(
@@ -872,6 +844,10 @@ function Products() {
   )
 }
 
+/* ============================================================
+   PUBLIC SHADE CARDS
+   ============================================================ */
+
 function Shades() {
   const [shades, setShades] = useState([])
   const [error, setError] = useState('')
@@ -1190,21 +1166,6 @@ function Customer() {
         ])
 
         if (active) {
-          console.log(
-            'Customer profile:',
-            a.data
-          )
-
-          console.log(
-            'Customer orders:',
-            b.data
-          )
-
-          console.log(
-            'Customer invoices:',
-            c.data
-          )
-
           setMe(a.data)
           setOrders(b.data)
           setInvoices(c.data)
@@ -1457,6 +1418,7 @@ function Admin() {
   const [products, setProducts] = useState([])
   const [orders, setOrders] = useState([])
   const [customers, setCustomers] = useState([])
+  const [shades, setShades] = useState([])
 
   const [loadingProducts, setLoadingProducts] =
     useState(true)
@@ -1467,6 +1429,9 @@ function Admin() {
   const [loadingCustomers, setLoadingCustomers] =
     useState(true)
 
+  const [loadingShades, setLoadingShades] =
+    useState(true)
+
   const [productError, setProductError] =
     useState('')
 
@@ -1474,6 +1439,9 @@ function Admin() {
     useState('')
 
   const [customerError, setCustomerError] =
+    useState('')
+
+  const [shadeError, setShadeError] =
     useState('')
 
   const [newP, setNewP] = useState({
@@ -1498,6 +1466,25 @@ function Admin() {
   const [savingProduct, setSavingProduct] =
     useState(false)
 
+  /* ==========================================================
+     SHADE CARD STATE
+     ========================================================== */
+
+  const [newShade, setNewShade] = useState({
+    shadeCode: '',
+    shadeName: '',
+    imageUrl: '',
+    category: '',
+    productId: '',
+    active: true
+  })
+
+  const [editingShade, setEditingShade] =
+    useState(null)
+
+  const [savingShade, setSavingShade] =
+    useState(false)
+
   async function loadProducts() {
     setLoadingProducts(true)
     setProductError('')
@@ -1505,11 +1492,6 @@ function Admin() {
     try {
       const r =
         await api.get('/admin/products')
-
-      console.log(
-        'Admin products API:',
-        r.data
-      )
 
       setProducts(r.data)
     } catch (e) {
@@ -1578,11 +1560,37 @@ function Admin() {
     }
   }
 
+  async function loadShades() {
+    setLoadingShades(true)
+    setShadeError('')
+
+    try {
+      const r =
+        await api.get('/shades')
+
+      setShades(r.data)
+    } catch (e) {
+      console.error(
+        'Admin shades API error:',
+        e
+      )
+
+      setShadeError(
+        e.response?.data?.message ||
+        e.message ||
+        'Failed to load shade cards'
+      )
+    } finally {
+      setLoadingShades(false)
+    }
+  }
+
   async function load() {
     await Promise.all([
       loadProducts(),
       loadOrders(),
-      loadCustomers()
+      loadCustomers(),
+      loadShades()
     ])
   }
 
@@ -1743,11 +1751,6 @@ function Admin() {
           )
       }
 
-      console.log(
-        'Update product payload:',
-        payload
-      )
-
       await api.put(
         `/admin/products/${editingProduct.id}`,
         payload
@@ -1892,6 +1895,232 @@ function Admin() {
     }
   }
 
+  /* ==========================================================
+     SHADE CARD FUNCTIONS
+     ========================================================== */
+
+  function setShadeField(
+    key,
+    value
+  ) {
+    setNewShade(
+      current => ({
+        ...current,
+        [key]: value
+      })
+    )
+  }
+
+  function resetShadeForm() {
+    setNewShade({
+      shadeCode: '',
+      shadeName: '',
+      imageUrl: '',
+      category: '',
+      productId: '',
+      active: true
+    })
+
+    setEditingShade(null)
+  }
+
+  async function addShade(e) {
+    e.preventDefault()
+
+    if (!newShade.productId) {
+      alert(
+        'Please select a product.'
+      )
+      return
+    }
+
+    if (
+      !newShade.shadeCode.trim() ||
+      !newShade.shadeName.trim()
+    ) {
+      alert(
+        'Shade code and shade name are required.'
+      )
+      return
+    }
+
+    setSavingShade(true)
+
+    try {
+      const payload = {
+        shadeCode:
+          newShade.shadeCode.trim(),
+        shadeName:
+          newShade.shadeName.trim(),
+        imageUrl:
+          newShade.imageUrl.trim() || null,
+        category:
+          newShade.category.trim() || null,
+        active:
+          newShade.active,
+        product: {
+          id: Number(
+            newShade.productId
+          )
+        }
+      }
+
+      await api.post(
+        '/shades',
+        payload
+      )
+
+      alert(
+        'Shade card added successfully.'
+      )
+
+      resetShadeForm()
+      await loadShades()
+    } catch (e) {
+      console.error(
+        'Add shade error:',
+        e
+      )
+
+      alert(
+        e.response?.data?.message ||
+        e.response?.data ||
+        'Failed to add shade card'
+      )
+    } finally {
+      setSavingShade(false)
+    }
+  }
+
+  function startEditShade(shade) {
+    setEditingShade({
+      id: shade.id,
+      shadeCode:
+        shade.shadeCode || '',
+      shadeName:
+        shade.shadeName || '',
+      imageUrl:
+        shade.imageUrl || '',
+      category:
+        shade.category || '',
+      productId:
+        shade.product?.id
+          ? String(
+              shade.product.id
+            )
+          : '',
+      active:
+        shade.active !== false
+    })
+  }
+
+  function setEditingShadeField(
+    key,
+    value
+  ) {
+    setEditingShade(
+      current => ({
+        ...current,
+        [key]: value
+      })
+    )
+  }
+
+  async function saveShade(e) {
+    e.preventDefault()
+
+    if (!editingShade) {
+      return
+    }
+
+    if (!editingShade.productId) {
+      alert(
+        'Please select a product.'
+      )
+      return
+    }
+
+    setSavingShade(true)
+
+    try {
+      const payload = {
+        shadeCode:
+          editingShade.shadeCode.trim(),
+        shadeName:
+          editingShade.shadeName.trim(),
+        imageUrl:
+          editingShade.imageUrl.trim() || null,
+        category:
+          editingShade.category.trim() || null,
+        active:
+          editingShade.active,
+        product: {
+          id: Number(
+            editingShade.productId
+          )
+        }
+      }
+
+      await api.put(
+        `/shades/${editingShade.id}`,
+        payload
+      )
+
+      alert(
+        'Shade card updated successfully.'
+      )
+
+      setEditingShade(null)
+
+      await loadShades()
+    } catch (e) {
+      console.error(
+        'Update shade error:',
+        e
+      )
+
+      alert(
+        e.response?.data?.message ||
+        e.response?.data ||
+        'Failed to update shade card'
+      )
+    } finally {
+      setSavingShade(false)
+    }
+  }
+
+  async function deleteShade(id) {
+    if (
+      !confirm(
+        'Delete this shade card?'
+      )
+    ) {
+      return
+    }
+
+    try {
+      await api.delete(
+        `/shades/${id}`
+      )
+
+      alert(
+        'Shade card deleted successfully.'
+      )
+
+      await loadShades()
+    } catch (e) {
+      console.error(
+        'Delete shade error:',
+        e
+      )
+
+      alert(
+        e.response?.data?.message ||
+        'Failed to delete shade card'
+      )
+    }
+  }
+
   return (
     <main className="container">
       <h2>Admin Dashboard</h2>
@@ -1911,7 +2140,16 @@ function Admin() {
           <b>{customers.length}</b>
           <span>Customers</span>
         </div>
+
+        <div className="stat">
+          <b>{shades.length}</b>
+          <span>Shade Cards</span>
+        </div>
       </div>
+
+      {/* ======================================================
+          ADD PRODUCT
+          ====================================================== */}
 
       <section>
         <h3>Add Product</h3>
@@ -2003,6 +2241,10 @@ function Admin() {
         </form>
       </section>
 
+      {/* ======================================================
+          PRODUCT & STOCK MANAGEMENT
+          ====================================================== */}
+
       <section>
         <h3>
           Product & Stock Management
@@ -2019,14 +2261,6 @@ function Admin() {
             {productError}
           </div>
         )}
-
-        {!loadingProducts &&
-          !productError &&
-          products.length === 0 && (
-            <p>
-              No products found.
-            </p>
-          )}
 
         <div className="grid">
           {products.map(p => (
@@ -2384,6 +2618,303 @@ function Admin() {
         </div>
       </section>
 
+      {/* ======================================================
+          SHADE CARD MANAGEMENT
+          ====================================================== */}
+
+      <section>
+        <h3>Shade Card Management</h3>
+
+        <form
+          className="card formgrid"
+          onSubmit={
+            editingShade
+              ? saveShade
+              : addShade
+          }
+        >
+          <h3>
+            {editingShade
+              ? 'Edit Shade Card'
+              : 'Add Shade Card'}
+          </h3>
+
+          <input
+            type="text"
+            placeholder="Shade Code"
+            value={
+              editingShade
+                ? editingShade.shadeCode
+                : newShade.shadeCode
+            }
+            onChange={e =>
+              editingShade
+                ? setEditingShadeField(
+                    'shadeCode',
+                    e.target.value
+                  )
+                : setShadeField(
+                    'shadeCode',
+                    e.target.value
+                  )
+            }
+            required
+          />
+
+          <input
+            type="text"
+            placeholder="Shade Name"
+            value={
+              editingShade
+                ? editingShade.shadeName
+                : newShade.shadeName
+            }
+            onChange={e =>
+              editingShade
+                ? setEditingShadeField(
+                    'shadeName',
+                    e.target.value
+                  )
+                : setShadeField(
+                    'shadeName',
+                    e.target.value
+                  )
+            }
+            required
+          />
+
+          <input
+            type="text"
+            placeholder="Category"
+            value={
+              editingShade
+                ? editingShade.category
+                : newShade.category
+            }
+            onChange={e =>
+              editingShade
+                ? setEditingShadeField(
+                    'category',
+                    e.target.value
+                  )
+                : setShadeField(
+                    'category',
+                    e.target.value
+                  )
+            }
+          />
+
+          <input
+            type="text"
+            placeholder="Image URL"
+            value={
+              editingShade
+                ? editingShade.imageUrl
+                : newShade.imageUrl
+            }
+            onChange={e =>
+              editingShade
+                ? setEditingShadeField(
+                    'imageUrl',
+                    e.target.value
+                  )
+                : setShadeField(
+                    'imageUrl',
+                    e.target.value
+                  )
+            }
+          />
+
+          <select
+            value={
+              editingShade
+                ? editingShade.productId
+                : newShade.productId
+            }
+            onChange={e =>
+              editingShade
+                ? setEditingShadeField(
+                    'productId',
+                    e.target.value
+                  )
+                : setShadeField(
+                    'productId',
+                    e.target.value
+                  )
+            }
+            required
+          >
+            <option value="">
+              Select Product
+            </option>
+
+            {products.map(p => (
+              <option
+                key={p.id}
+                value={p.id}
+              >
+                {p.name} ({p.code})
+              </option>
+            ))}
+          </select>
+
+          <label>
+            <input
+              type="checkbox"
+              checked={
+                editingShade
+                  ? editingShade.active
+                  : newShade.active
+              }
+              onChange={e =>
+                editingShade
+                  ? setEditingShadeField(
+                      'active',
+                      e.target.checked
+                    )
+                  : setShadeField(
+                      'active',
+                      e.target.checked
+                    )
+              }
+            />
+            {' '}
+            Active
+          </label>
+
+          <div className="actions">
+            <button
+              className="button"
+              type="submit"
+              disabled={savingShade}
+            >
+              {savingShade
+                ? 'Saving...'
+                : editingShade
+                  ? 'Save Shade Card'
+                  : 'Add Shade Card'}
+            </button>
+
+            {editingShade && (
+              <button
+                type="button"
+                className="linkbtn"
+                onClick={
+                  resetShadeForm
+                }
+                disabled={
+                  savingShade
+                }
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        </form>
+
+        {loadingShades && (
+          <p>
+            Loading shade cards...
+          </p>
+        )}
+
+        {shadeError && (
+          <div className="error">
+            {shadeError}
+          </div>
+        )}
+
+        {!loadingShades &&
+          !shadeError &&
+          shades.length === 0 && (
+            <div className="card">
+              <p>
+                No shade cards have been
+                created yet.
+              </p>
+            </div>
+          )}
+
+        <div className="grid">
+          {shades.map(shade => (
+            <div
+              className="card"
+              key={shade.id}
+            >
+              {shade.imageUrl ? (
+                <img
+                  className="shadeimg"
+                  src={shade.imageUrl}
+                  alt={shade.shadeName}
+                />
+              ) : (
+                <div className="shadeplaceholder">
+                  {shade.shadeName}
+                </div>
+              )}
+
+              <h3>
+                {shade.shadeName}
+              </h3>
+
+              <p>
+                <b>Code:</b>{' '}
+                {shade.shadeCode}
+              </p>
+
+              <p>
+                <b>Category:</b>{' '}
+                {shade.category ||
+                  '-'}
+              </p>
+
+              <p>
+                <b>Product:</b>{' '}
+                {shade.product?.name ||
+                  '-'}
+              </p>
+
+              <p>
+                <b>Status:</b>{' '}
+                {shade.active
+                  ? 'Active'
+                  : 'Inactive'}
+              </p>
+
+              <div className="actions">
+                <button
+                  type="button"
+                  className="button"
+                  onClick={() =>
+                    startEditShade(
+                      shade
+                    )
+                  }
+                >
+                  Edit Shade
+                </button>
+
+                <button
+                  type="button"
+                  className="button danger"
+                  onClick={() =>
+                    deleteShade(
+                      shade.id
+                    )
+                  }
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ======================================================
+          ORDERS
+          ====================================================== */}
+
       <section>
         <h3>Orders</h3>
 
@@ -2461,6 +2992,10 @@ function Admin() {
           ))}
         </div>
       </section>
+
+      {/* ======================================================
+          CUSTOMERS
+          ====================================================== */}
 
       <section>
         <h3>Customers</h3>
