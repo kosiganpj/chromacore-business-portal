@@ -17,7 +17,7 @@ function Nav() {
   return (
     <nav>
       <Link className="brand" to="/">
-        ChromaCore
+        Sree Sivasakthi Traders
       </Link>
 
       <div className="navlinks">
@@ -58,7 +58,7 @@ function Home() {
           DYES • CHEMICALS • B2B SUPPLY
         </span>
 
-        <h1>ChromaCore Dyes & Chemicals</h1>
+        <h1>Sree Sivasakthi Traders</h1>
 
         <p>
           Digital product catalogue, shade cards, customer orders,
@@ -1141,15 +1141,6 @@ function Customer() {
     }
   }, [])
 
-  /*
-   * FIX:
-   * Normal <a href="..."> does not send the JWT Authorization
-   * header. The invoice PDF endpoint is protected by Spring
-   * Security, so direct browser navigation returns HTTP 401.
-   *
-   * This function downloads the PDF using the JWT and then
-   * opens the returned Blob in a new browser tab.
-   */
   async function openInvoicePdf(invoiceId) {
     try {
       const token = localStorage.getItem('cc_token')
