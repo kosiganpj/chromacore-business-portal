@@ -7,46 +7,101 @@ function Nav() {
   const role = localStorage.getItem('cc_role')
   const nav = useNavigate()
 
+  const [menuOpen, setMenuOpen] = useState(false)
+
   const logout = () => {
     localStorage.removeItem('cc_token')
     localStorage.removeItem('cc_role')
     localStorage.removeItem('cc_cart')
+    setMenuOpen(false)
     nav('/')
+  }
+
+  const closeMenu = () => {
+    setMenuOpen(false)
   }
 
   return (
     <nav>
-      <Link className="brand" to="/">
+      <Link
+        className="brand"
+        to="/"
+        onClick={closeMenu}
+      >
         Sree Sivasakthi Traders
       </Link>
 
-      <div className="navlinks">
-        <Link to="/">Home</Link>
+      <button
+        type="button"
+        className="menu-toggle"
+        onClick={() =>
+          setMenuOpen(current => !current)
+        }
+        aria-label="Toggle navigation menu"
+        aria-expanded={menuOpen}
+      >
+        {menuOpen ? '✕' : '☰'}
+      </button>
 
-        <Link to="/products">Products</Link>
+      <div
+        className={`navlinks ${
+          menuOpen ? 'mobile-open' : ''
+        }`}
+      >
+        <Link
+          to="/"
+          onClick={closeMenu}
+        >
+          Home
+        </Link>
 
-        <Link to="/shades">Shade Cards</Link>
+        <Link
+          to="/products"
+          onClick={closeMenu}
+        >
+          Products
+        </Link>
+
+        <Link
+          to="/shades"
+          onClick={closeMenu}
+        >
+          Shade Cards
+        </Link>
 
         {!token && (
-          <Link to="/login">
+          <Link
+            to="/login"
+            onClick={closeMenu}
+          >
             Login
           </Link>
         )}
 
         {!token && (
-          <Link className="button" to="/register">
+          <Link
+            className="button"
+            to="/register"
+            onClick={closeMenu}
+          >
             Register
           </Link>
         )}
 
         {token && role === 'CUSTOMER' && (
-          <Link to="/customer">
+          <Link
+            to="/customer"
+            onClick={closeMenu}
+          >
             Dashboard
           </Link>
         )}
 
         {token && role === 'ADMIN' && (
-          <Link to="/admin">
+          <Link
+            to="/admin"
+            onClick={closeMenu}
+          >
             Admin
           </Link>
         )}
@@ -64,7 +119,6 @@ function Nav() {
     </nav>
   )
 }
-
 function Home() {
   const token = localStorage.getItem('cc_token')
   const role = localStorage.getItem('cc_role')
@@ -1365,42 +1419,35 @@ function Customer() {
                       <b>Order Progress</b>
                     </p>
 
-                    <div className="table">
-                      {statusSteps.map(
-                        (
-                          step,
-                          index
-                        ) => (
-                          <div
-                            className="tr"
-                            key={step}
-                          >
-                            <span>
-                              {index <=
-                              currentIndex
-                                ? '✓'
-                                : '○'}
-                            </span>
+                    <div className="order-tracking">
+                      {statusSteps.map((step, index) => (
+                        <div
+                          className={`tracking-step ${
+                            index <= currentIndex ? 'completed' : ''
+                          } ${
+                            index === currentIndex + 1 ? 'next' : ''
+                          }`}
+                          key={step}
+                        >
+                          <span className="tracking-icon">
+                            {index <= currentIndex ? '✓' : '○'}
+                          </span>
+
+                          <div className="tracking-info">
+                            <strong>
+                              {formatStatus(step)}
+                            </strong>
 
                             <span>
-                              {formatStatus(
-                                step
-                              )}
-                            </span>
-
-                            <span>
-                              {index <=
-                              currentIndex
+                              {index <= currentIndex
                                 ? 'Completed'
-                                : index ===
-                                    currentIndex +
-                                      1
+                                : index === currentIndex + 1
                                   ? 'Next'
                                   : 'Pending'}
                             </span>
                           </div>
-                        )
-                      )}
+                        </div>
+                      ))}
                     </div>
                   </>
                 )}
