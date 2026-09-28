@@ -16,7 +16,9 @@ function Nav() {
 
   return (
     <nav>
-      <Link className="brand" to="/">ChromaCore</Link>
+      <Link className="brand" to="/">
+        ChromaCore
+      </Link>
 
       <div className="navlinks">
         <Link to="/products">Products</Link>
@@ -39,7 +41,10 @@ function Nav() {
         )}
 
         {token && (
-          <button className="linkbtn" onClick={logout}>
+          <button
+            className="linkbtn"
+            onClick={logout}
+          >
             Logout
           </button>
         )}
@@ -85,6 +90,10 @@ function Products() {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  // Product search and filtering
+  const [search, setSearch] = useState('')
+  const [category, setCategory] = useState('ALL')
 
   const [cart, setCart] = useState(() => {
     try {
@@ -173,9 +182,8 @@ function Products() {
       )
 
       if (existing) {
-        const currentQuantity = Number(
-          existing.quantity
-        ) || 0
+        const currentQuantity =
+          Number(existing.quantity) || 0
 
         if (currentQuantity >= available) {
           setOrderError(
@@ -325,6 +333,52 @@ function Products() {
     return Number(product.price || 0)
   }
 
+  /*
+   * Build category list dynamically from the products
+   * returned by the backend.
+   */
+  const categories = [
+    'ALL',
+    ...new Set(
+      products
+        .map(p => p.category)
+        .filter(Boolean)
+    )
+  ]
+
+  /*
+   * Search products by:
+   * - product name
+   * - product code
+   * - category
+   * - shade
+   * - application
+   *
+   * Category dropdown can also be used independently.
+   */
+  const filteredProducts = products.filter(p => {
+    const searchText = search
+      .trim()
+      .toLowerCase()
+
+    const matchesSearch =
+      !searchText ||
+      p.name?.toLowerCase().includes(searchText) ||
+      p.code?.toLowerCase().includes(searchText) ||
+      p.category?.toLowerCase().includes(searchText) ||
+      p.shade?.toLowerCase().includes(searchText) ||
+      p.application?.toLowerCase().includes(searchText)
+
+    const matchesCategory =
+      category === 'ALL' ||
+      p.category === category
+
+    return (
+      matchesSearch &&
+      matchesCategory
+    )
+  })
+
   const cartTotal = cart.reduce(
     (sum, item) => {
       const quantity = Number(item.quantity)
@@ -457,6 +511,11 @@ function Products() {
     }
   }
 
+  function clearFilters() {
+    setSearch('')
+    setCategory('ALL')
+  }
+
   return (
     <main className="container">
       <h2>Products</h2>
@@ -475,6 +534,66 @@ function Products() {
         !error &&
         products.length === 0 && (
           <p>No products available.</p>
+        )}
+
+      {!loading &&
+        !error &&
+        products.length > 0 && (
+          <section className="card">
+            <h3>Find Products</h3>
+
+            <div className="formgrid">
+              <input
+                type="text"
+                placeholder="Search by product, code, category, shade or application..."
+                value={search}
+                onChange={e =>
+                  setSearch(e.target.value)
+                }
+              />
+
+              <select
+                value={category}
+                onChange={e =>
+                  setCategory(e.target.value)
+                }
+              >
+                {categories.map(c => (
+                  <option
+                    key={c}
+                    value={c}
+                  >
+                    {c === 'ALL'
+                      ? 'All Categories'
+                      : c}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="actions">
+              <p>
+                Showing{' '}
+                <b>
+                  {filteredProducts.length}
+                </b>{' '}
+                of{' '}
+                <b>{products.length}</b>{' '}
+                products
+              </p>
+
+              {(search ||
+                category !== 'ALL') && (
+                <button
+                  type="button"
+                  className="linkbtn"
+                  onClick={clearFilters}
+                >
+                  Clear Filters
+                </button>
+              )}
+            </div>
+          </section>
         )}
 
       {isCustomer && (
@@ -628,8 +747,27 @@ function Products() {
         </div>
       )}
 
+      {!loading &&
+        !error &&
+        products.length > 0 &&
+        filteredProducts.length === 0 && (
+          <div className="card">
+            <p>
+              No products match your search.
+            </p>
+
+            <button
+              type="button"
+              className="button"
+              onClick={clearFilters}
+            >
+              Clear Filters
+            </button>
+          </div>
+        )}
+
       <div className="grid">
-        {products.map(p => {
+        {filteredProducts.map(p => {
           const available =
             getAvailableQuantity(p)
 
