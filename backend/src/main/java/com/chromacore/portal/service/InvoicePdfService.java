@@ -22,7 +22,7 @@ public class InvoicePdfService {
                     cs.beginText();
                     cs.setFont(font, 18);
                     cs.newLineAtOffset(50, 740);
-                    cs.showText("CHROMACORE DYES & CHEMICALS");
+                    cs.showText("SREE SIVASAKTHI TRADERS");
                     cs.setFont(font, 12);
                     cs.newLineAtOffset(0, -35);
                     cs.showText("Invoice: " + invoice.getInvoiceNumber());

@@ -283,7 +283,7 @@ public class OrderController {
         notificationService.email(
                 customer.getEmail(),
 
-                "ChromaCore Order Confirmation - "
+                "Sree Sivasakthi Traders Order Confirmation - "
                         + saved.getOrderNumber(),
 
                 "Dear "
@@ -298,7 +298,7 @@ public class OrderController {
                         + ",\n\n"
 
                         + "Thank you for your order with "
-                        + "ChromaCore Dyes & Chemicals."
+                        + "Sree Sivasakthi Traders."
                         + "\n\n"
 
                         + "Order Number: "
@@ -310,7 +310,7 @@ public class OrderController {
                         + "\n"
 
                         + String.format(
-                                "Order Total: ₹%.2f%n",
+                                "Order Total: â‚¹%.2f%n",
                                 saved.getTotalAmount()
                         )
 
@@ -319,13 +319,13 @@ public class OrderController {
                         + "\n\n"
 
                         + "Your invoice is available in the "
-                        + "ChromaCore customer portal."
+                        + "Sree Sivasakthi Traders customer portal."
                         + "\n\n"
 
                         + "Thank you for your business."
                         + "\n\n"
 
-                        + "ChromaCore Dyes & Chemicals"
+                        + "Sree Sivasakthi Traders"
         );
 
         /*
@@ -338,7 +338,7 @@ public class OrderController {
         notificationService.whatsapp(
                 customer.getPhone(),
 
-                "ChromaCore Order Confirmation\n\n"
+                "Sree Sivasakthi Traders Order Confirmation\n\n"
 
                         + "Dear "
                         + (
@@ -350,7 +350,7 @@ public class OrderController {
                         + ",\n\n"
 
                         + "Thank you for your order with "
-                        + "ChromaCore Dyes & Chemicals."
+                        + "Sree Sivasakthi Traders."
                         + "\n\n"
 
                         + "Order Number: "
@@ -362,7 +362,7 @@ public class OrderController {
                         + "\n"
 
                         + String.format(
-                                "Order Total: ₹%.2f%n",
+                                "Order Total: â‚¹%.2f%n",
                                 saved.getTotalAmount()
                         )
 
@@ -371,10 +371,10 @@ public class OrderController {
                         + "\n\n"
 
                         + "Your invoice is available in the "
-                        + "ChromaCore customer portal."
+                        + "Sree Sivasakthi Traders customer portal."
                         + "\n\n"
 
-                        + "ChromaCore Dyes & Chemicals"
+                        + "Sree Sivasakthi Traders"
         );
 
         return ResponseEntity.ok(saved);

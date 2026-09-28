@@ -10,15 +10,37 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @Configuration
 public class DataSeeder {
     @Bean
-    CommandLineRunner seed(UserRepository users, ProductRepository products, PasswordEncoder encoder) {
+    CommandLineRunner seed(
+            UserRepository users,
+            ProductRepository products,
+            PasswordEncoder encoder
+    ) {
         return args -> {
-            if (users.findByEmailIgnoreCase("admin@chromacore.local").isEmpty()) {
+
+            if (users.findByEmailIgnoreCase(
+                    "admin@sreesivasakthitraders.com"
+            ).isEmpty()) {
+
                 AppUser a = new AppUser();
-                a.setEmail("admin@chromacore.local");
-                a.setPasswordHash(encoder.encode("Admin@12345"));
-                a.setCompanyName("ChromaCore Dyes & Chemicals");
-                a.setContactName("Administrator");
+
+                a.setEmail(
+                        "admin@sreesivasakthitraders.com"
+                );
+
+                a.setPasswordHash(
+                        encoder.encode("Admin@12345")
+                );
+
+                a.setCompanyName(
+                        "Sree Sivasakthi Traders"
+                );
+
+                a.setContactName(
+                        "Administrator"
+                );
+
                 a.setRole(Role.ADMIN);
+
                 users.save(a);
             }
 
