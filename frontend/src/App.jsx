@@ -21,7 +21,6 @@ function Nav() {
       </Link>
 
       <div className="navlinks">
-        {/* Always available */}
         <Link to="/">Home</Link>
 
         <Link to="/products">Products</Link>
@@ -67,6 +66,11 @@ function Nav() {
 }
 
 function Home() {
+  const token = localStorage.getItem('cc_token')
+  const role = localStorage.getItem('cc_role')
+
+  const isLoggedIn = !!token
+
   return (
     <main className="hero">
       <div>
@@ -87,12 +91,32 @@ function Home() {
             Explore Products
           </Link>
 
-          <Link
-            className="button secondary"
-            to="/register"
-          >
-            Create Customer Account
-          </Link>
+          {!isLoggedIn && (
+            <Link
+              className="button secondary"
+              to="/register"
+            >
+              Create Customer Account
+            </Link>
+          )}
+
+          {isLoggedIn && role === 'CUSTOMER' && (
+            <Link
+              className="button secondary"
+              to="/customer"
+            >
+              Go to Dashboard
+            </Link>
+          )}
+
+          {isLoggedIn && role === 'ADMIN' && (
+            <Link
+              className="button secondary"
+              to="/admin"
+            >
+              Go to Admin
+            </Link>
+          )}
         </div>
       </div>
     </main>
