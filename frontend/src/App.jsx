@@ -41,10 +41,7 @@ function Nav() {
         )}
 
         {token && (
-          <button
-            className="linkbtn"
-            onClick={logout}
-          >
+          <button className="linkbtn" onClick={logout}>
             Logout
           </button>
         )}
@@ -113,10 +110,7 @@ function Products() {
   const isCustomer = token && role === 'CUSTOMER'
 
   useEffect(() => {
-    localStorage.setItem(
-      'cc_cart',
-      JSON.stringify(cart)
-    )
+    localStorage.setItem('cc_cart', JSON.stringify(cart))
   }, [cart])
 
   useEffect(() => {
@@ -341,9 +335,7 @@ function Products() {
   ]
 
   const filteredProducts = products.filter(p => {
-    const searchText = search
-      .trim()
-      .toLowerCase()
+    const searchText = search.trim().toLowerCase()
 
     const matchesSearch =
       !searchText ||
@@ -357,10 +349,7 @@ function Products() {
       category === 'ALL' ||
       p.category === category
 
-    return (
-      matchesSearch &&
-      matchesCategory
-    )
+    return matchesSearch && matchesCategory
   })
 
   const cartTotal = cart.reduce(
@@ -376,8 +365,7 @@ function Products() {
 
       return (
         sum +
-        productPrice(item.product) *
-          quantity
+        productPrice(item.product) * quantity
       )
     },
     0
@@ -447,10 +435,7 @@ function Products() {
         }))
       }
 
-      const r = await api.post(
-        '/orders',
-        payload
-      )
+      const r = await api.post('/orders', payload)
 
       setCart([])
       localStorage.removeItem('cc_cart')
@@ -463,14 +448,9 @@ function Products() {
       const productsResponse =
         await api.get('/products/public')
 
-      setProducts(
-        productsResponse.data
-      )
+      setProducts(productsResponse.data)
     } catch (e) {
-      console.error(
-        'Create order error:',
-        e
-      )
+      console.error('Create order error:', e)
 
       setOrderError(
         e.response?.data?.message ||
@@ -492,9 +472,7 @@ function Products() {
     <main className="container">
       <h2>Products</h2>
 
-      {loading && (
-        <p>Loading products...</p>
-      )}
+      {loading && <p>Loading products...</p>}
 
       {error && (
         <div className="error">
@@ -531,10 +509,7 @@ function Products() {
                 }
               >
                 {categories.map(c => (
-                  <option
-                    key={c}
-                    value={c}
-                  >
+                  <option key={c} value={c}>
                     {c === 'ALL'
                       ? 'All Categories'
                       : c}
@@ -545,13 +520,8 @@ function Products() {
 
             <div className="actions">
               <p>
-                Showing{' '}
-                <b>
-                  {filteredProducts.length}
-                </b>{' '}
-                of{' '}
-                <b>{products.length}</b>{' '}
-                products
+                Showing <b>{filteredProducts.length}</b>{' '}
+                of <b>{products.length}</b> products
               </p>
 
               {(search ||
@@ -583,9 +553,7 @@ function Products() {
                     key={item.product.id}
                   >
                     <span>
-                      <b>
-                        {item.product.name}
-                      </b>
+                      <b>{item.product.name}</b>
                       <br />
                       {item.product.code}
                     </span>
@@ -645,8 +613,7 @@ function Products() {
               </div>
 
               <h3>
-                Total: ₹{' '}
-                {cartTotal.toFixed(2)}
+                Total: ₹ {cartTotal.toFixed(2)}
               </h3>
 
               <textarea
@@ -710,10 +677,7 @@ function Products() {
             your cart and place orders.
           </p>
 
-          <Link
-            className="button"
-            to="/login"
-          >
+          <Link className="button" to="/login">
             Customer Login
           </Link>
         </div>
@@ -724,9 +688,7 @@ function Products() {
         products.length > 0 &&
         filteredProducts.length === 0 && (
           <div className="card">
-            <p>
-              No products match your search.
-            </p>
+            <p>No products match your search.</p>
 
             <button
               type="button"
@@ -759,10 +721,7 @@ function Products() {
             cartQuantity >= available
 
           return (
-            <div
-              className="card"
-              key={p.id}
-            >
+            <div className="card" key={p.id}>
               <div className="productimg">
                 {p.imageUrl ? (
                   <img
@@ -771,8 +730,7 @@ function Products() {
                   />
                 ) : (
                   <span>
-                    {p.shade ||
-                      'CHEMICAL'}
+                    {p.shade || 'CHEMICAL'}
                   </span>
                 )}
               </div>
@@ -791,30 +749,20 @@ function Products() {
               <p>
                 Price:{' '}
                 <b>
-                  ₹{' '}
-                  {productPrice(
-                    p
-                  ).toFixed(2)}
+                  ₹ {productPrice(p).toFixed(2)}
                 </b>
               </p>
 
               <p>
-                Available:{' '}
-                <b>
-                  {available}
-                </b>
+                Available: <b>{available}</b>
               </p>
 
               <span
                 className={`status ${
-                  p.status?.toLowerCase() ||
-                  ''
+                  p.status?.toLowerCase() || ''
                 }`}
               >
-                {p.status?.replace(
-                  '_',
-                  ' '
-                )}
+                {p.status?.replace('_', ' ')}
               </span>
 
               {isCustomer && (
@@ -822,8 +770,7 @@ function Products() {
                   type="button"
                   className="button"
                   disabled={
-                    p.status !==
-                      'AVAILABLE' ||
+                    p.status !== 'AVAILABLE' ||
                     available <= 0 ||
                     maxReached
                   }
@@ -857,9 +804,7 @@ function Shades() {
 
     const fetchShades = async () => {
       try {
-        const r = await api.get(
-          '/shades/public'
-        )
+        const r = await api.get('/shades/public')
 
         if (active) {
           setShades(r.data)
@@ -899,9 +844,7 @@ function Shades() {
 
       {!error &&
         shades.length === 0 && (
-          <p>
-            No shade cards available.
-          </p>
+          <p>No shade cards available.</p>
         )}
 
       <div className="grid">
@@ -935,8 +878,7 @@ function Shades() {
 
             <span
               className={`status ${
-                s.product?.status?.toLowerCase() ||
-                ''
+                s.product?.status?.toLowerCase() || ''
               }`}
             >
               {s.product?.status?.replace(
@@ -950,6 +892,10 @@ function Shades() {
     </main>
   )
 }
+
+/* ============================================================
+   LOGIN
+   ============================================================ */
 
 function Login() {
   const [form, setForm] = useState({
@@ -1040,6 +986,10 @@ function Login() {
     </main>
   )
 }
+
+/* ============================================================
+   REGISTER
+   ============================================================ */
 
 function Register() {
   const [form, setForm] = useState({
@@ -1155,11 +1105,7 @@ function Customer() {
 
     const fetchCustomerData = async () => {
       try {
-        const [
-          a,
-          b,
-          c
-        ] = await Promise.all([
+        const [a, b, c] = await Promise.all([
           api.get('/customer/me'),
           api.get('/customer/orders'),
           api.get('/customer/invoices')
@@ -1566,7 +1512,7 @@ function Admin() {
 
     try {
       const r =
-        await api.get('/shades')
+        await api.get('/admin/shades')
 
       setShades(r.data)
     } catch (e) {
@@ -1605,6 +1551,10 @@ function Admin() {
     })
   }
 
+  /* ==========================================================
+     PRODUCT FUNCTIONS
+     ========================================================== */
+
   async function addProduct(e) {
     e.preventDefault()
 
@@ -1615,13 +1565,9 @@ function Admin() {
           ...newP,
           price: Number(newP.price),
           stockQuantity:
-            Number(
-              newP.stockQuantity
-            ),
+            Number(newP.stockQuantity),
           minimumStock:
-            Number(
-              newP.minimumStock
-            )
+            Number(newP.minimumStock)
         }
       )
 
@@ -1897,6 +1843,9 @@ function Admin() {
 
   /* ==========================================================
      SHADE CARD FUNCTIONS
+     IMPORTANT:
+     ADMIN API = /admin/shades
+     PUBLIC API = /shades/public
      ========================================================== */
 
   function setShadeField(
@@ -1950,23 +1899,25 @@ function Admin() {
       const payload = {
         shadeCode:
           newShade.shadeCode.trim(),
+
         shadeName:
           newShade.shadeName.trim(),
+
         imageUrl:
           newShade.imageUrl.trim() || null,
+
         category:
           newShade.category.trim() || null,
+
+        productId:
+          Number(newShade.productId),
+
         active:
-          newShade.active,
-        product: {
-          id: Number(
-            newShade.productId
-          )
-        }
+          newShade.active
       }
 
       await api.post(
-        '/shades',
+        '/admin/shades',
         payload
       )
 
@@ -1975,6 +1926,7 @@ function Admin() {
       )
 
       resetShadeForm()
+
       await loadShades()
     } catch (e) {
       console.error(
@@ -1995,20 +1947,26 @@ function Admin() {
   function startEditShade(shade) {
     setEditingShade({
       id: shade.id,
+
       shadeCode:
         shade.shadeCode || '',
+
       shadeName:
         shade.shadeName || '',
+
       imageUrl:
         shade.imageUrl || '',
+
       category:
         shade.category || '',
+
       productId:
         shade.product?.id
           ? String(
               shade.product.id
             )
           : '',
+
       active:
         shade.active !== false
     })
@@ -2040,29 +1998,41 @@ function Admin() {
       return
     }
 
+    if (
+      !editingShade.shadeCode.trim() ||
+      !editingShade.shadeName.trim()
+    ) {
+      alert(
+        'Shade code and shade name are required.'
+      )
+      return
+    }
+
     setSavingShade(true)
 
     try {
       const payload = {
         shadeCode:
           editingShade.shadeCode.trim(),
+
         shadeName:
           editingShade.shadeName.trim(),
+
         imageUrl:
           editingShade.imageUrl.trim() || null,
+
         category:
           editingShade.category.trim() || null,
+
+        productId:
+          Number(editingShade.productId),
+
         active:
-          editingShade.active,
-        product: {
-          id: Number(
-            editingShade.productId
-          )
-        }
+          editingShade.active
       }
 
       await api.put(
-        `/shades/${editingShade.id}`,
+        `/admin/shades/${editingShade.id}`,
         payload
       )
 
@@ -2100,7 +2070,7 @@ function Admin() {
 
     try {
       await api.delete(
-        `/shades/${id}`
+        `/admin/shades/${id}`
       )
 
       alert(
@@ -2864,14 +2834,12 @@ function Admin() {
 
               <p>
                 <b>Category:</b>{' '}
-                {shade.category ||
-                  '-'}
+                {shade.category || '-'}
               </p>
 
               <p>
                 <b>Product:</b>{' '}
-                {shade.product?.name ||
-                  '-'}
+                {shade.product?.name || '-'}
               </p>
 
               <p>
