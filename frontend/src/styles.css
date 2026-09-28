@@ -48,6 +48,7 @@ html {
 body {
   margin: 0;
   min-width: 320px;
+
   background:
     radial-gradient(
       circle at top left,
@@ -55,6 +56,7 @@ body {
       transparent 35%
     ),
     var(--cream);
+
   color: var(--text);
 }
 
@@ -118,6 +120,11 @@ nav {
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
+
+  height: 100%;
+
   font-size: 21px;
   font-weight: 850;
   letter-spacing: -0.4px;
@@ -128,10 +135,11 @@ nav {
 
 .brand::after {
   content: "";
+
   position: absolute;
 
   left: 0;
-  bottom: -7px;
+  bottom: 18px;
 
   width: 0;
   height: 2px;
@@ -153,8 +161,11 @@ nav {
 
 .navlinks a:not(.button) {
   position: relative;
+
   padding: 10px 12px;
+
   color: rgba(255, 255, 255, 0.82);
+
   font-weight: 600;
 }
 
@@ -166,6 +177,7 @@ nav {
   content: "";
 
   position: absolute;
+
   left: 12px;
   right: 12px;
   bottom: 4px;
@@ -222,6 +234,7 @@ nav {
   content: "";
 
   position: absolute;
+
   top: 0;
   left: -120%;
 
@@ -247,6 +260,7 @@ nav {
 
 .button:hover {
   transform: translateY(-3px);
+
   box-shadow:
     0 14px 30px rgba(198, 161, 91, 0.32);
 }
@@ -258,12 +272,15 @@ nav {
 .button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+
   transform: none;
+
   box-shadow: none;
 }
 
 .button.secondary {
   background: rgba(255, 255, 255, 0.78);
+
   color: var(--navy);
 
   border: 1px solid rgba(16, 42, 67, 0.12);
@@ -279,14 +296,18 @@ nav {
 .linkbtn {
   border: 0;
   background: transparent;
+
   color: var(--navy);
+
   cursor: pointer;
+
   font: inherit;
   font-weight: 700;
 }
 
 .linkbtn:hover {
   color: #b2873e;
+
   transform: translateY(-1px);
 }
 
@@ -369,6 +390,7 @@ nav {
   border: 1px solid rgba(198, 161, 91, 0.2);
 
   padding: 8px 13px;
+
   border-radius: 999px;
 }
 
@@ -534,6 +556,7 @@ section {
   content: "";
 
   position: absolute;
+
   inset: 0;
 
   background:
@@ -570,6 +593,7 @@ section {
 .card:hover .productimg img,
 .card:hover .shadeimg {
   transform: scale(1.045);
+
   filter: saturate(1.08);
 }
 
@@ -924,12 +948,14 @@ textarea:focus {
 @keyframes heroReveal {
   from {
     opacity: 0;
+
     transform:
       translateY(25px);
   }
 
   to {
     opacity: 1;
+
     transform:
       translateY(0);
   }
@@ -948,17 +974,34 @@ textarea:focus {
     padding:
       14px 4%;
 
-    align-items: flex-start;
+    /*
+      FIX:
+      Keep company name vertically centered
+      instead of aligning it to the top.
+    */
+    align-items: center;
 
     gap: 12px;
   }
 
   .brand {
+    display: inline-flex;
+
+    align-items: center;
+
+    height: auto;
+
+    min-height: 42px;
+
     font-size: 17px;
 
     max-width: 190px;
 
     line-height: 1.2;
+  }
+
+  .brand::after {
+    bottom: -5px;
   }
 
   .navlinks {
@@ -1051,6 +1094,10 @@ textarea:focus {
 
   .brand {
     max-width: 145px;
+
+    min-height: 38px;
+
+    font-size: 16px;
   }
 
   .hero h1 {
@@ -1059,6 +1106,7 @@ textarea:focus {
 
   .eyebrow {
     font-size: 9px;
+
     letter-spacing: 1.6px;
   }
 }
@@ -1072,4 +1120,126 @@ textarea:focus {
     rgba(198, 161, 91, 0.5);
 
   outline-offset: 3px;
+}
+
+/* =========================================================
+   RESPONSIVE MOBILE NAVIGATION
+   ========================================================= */
+
+.menu-toggle {
+  display: none;
+
+  border: 0;
+
+  background: transparent;
+
+  color: inherit;
+
+  font-size: 26px;
+
+  line-height: 1;
+
+  padding: 6px 8px;
+
+  cursor: pointer;
+}
+
+/* =========================================================
+   TABLET / MOBILE NAVIGATION
+   ========================================================= */
+
+@media (max-width: 850px) {
+  nav {
+    position: relative;
+
+    flex-wrap: wrap;
+
+    /*
+      Keep the entire top row vertically centered.
+    */
+    align-items: center;
+  }
+
+  .menu-toggle {
+    display: block;
+
+    margin-left: auto;
+  }
+
+  .navlinks {
+    display: none;
+
+    width: 100%;
+
+    flex-direction: column;
+
+    align-items: stretch;
+
+    gap: 6px;
+
+    padding-top: 10px;
+  }
+
+  .navlinks.mobile-open {
+    display: flex;
+  }
+
+  .navlinks a,
+  .navlinks .linkbtn {
+    width: 100%;
+
+    text-align: center;
+
+    box-sizing: border-box;
+  }
+
+  .navlinks a:not(.button) {
+    padding: 10px 12px;
+
+    font-size: 14px;
+  }
+
+  .navlinks .button {
+    padding: 10px 12px;
+
+    font-size: 14px;
+  }
+
+  .navlinks .linkbtn {
+    padding: 10px 12px;
+
+    font-size: 14px;
+  }
+}
+
+/* =========================================================
+   SMALLER PHONES
+   ========================================================= */
+
+@media (max-width: 430px) {
+  nav {
+    padding: 12px 4%;
+
+    align-items: center;
+  }
+
+  .brand {
+    display: inline-flex;
+
+    align-items: center;
+
+    max-width: 220px;
+
+    min-height: 38px;
+
+    font-size: 16px;
+  }
+
+  .menu-toggle {
+    font-size: 24px;
+  }
+
+  .navlinks {
+    padding-top: 8px;
+  }
 }
