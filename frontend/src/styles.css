@@ -37,17 +37,27 @@
   color-scheme: light;
 }
 
+/* =========================================================
+   GLOBAL RESET
+   ========================================================= */
+
 * {
   box-sizing: border-box;
 }
 
 html {
   scroll-behavior: smooth;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
   margin: 0;
   min-width: 320px;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 
   background:
     radial-gradient(
@@ -58,6 +68,12 @@ body {
     var(--cream);
 
   color: var(--text);
+}
+
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body,
@@ -87,12 +103,16 @@ a {
   color: inherit;
 }
 
+img {
+  max-width: 100%;
+}
+
 /* =========================================================
    NAVIGATION
    ========================================================= */
 
 nav {
-  height: 76px;
+  min-height: 76px;
 
   background:
     linear-gradient(
@@ -111,7 +131,7 @@ nav {
 
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 1000;
 
   box-shadow:
     0 8px 30px rgba(16, 42, 67, 0.18);
@@ -123,7 +143,7 @@ nav {
   display: inline-flex;
   align-items: center;
 
-  height: 100%;
+  min-height: 76px;
 
   font-size: 21px;
   font-weight: 850;
@@ -194,6 +214,22 @@ nav {
 
 .navlinks a:not(.button):hover::after {
   transform: scaleX(1);
+}
+
+.menu-toggle {
+  display: none;
+
+  border: 0;
+  background: transparent;
+
+  color: white;
+
+  font-size: 28px;
+  line-height: 1;
+
+  padding: 6px 8px;
+
+  cursor: pointer;
 }
 
 /* =========================================================
@@ -297,7 +333,7 @@ nav {
   border: 0;
   background: transparent;
 
-  color: var(--navy);
+  color: white;
 
   cursor: pointer;
 
@@ -306,8 +342,7 @@ nav {
 }
 
 .linkbtn:hover {
-  color: #b2873e;
-
+  color: var(--gold-light);
   transform: translateY(-1px);
 }
 
@@ -428,7 +463,7 @@ nav {
 
   color: var(--muted);
 
-  margin-bottom: 30px;
+  margin: 0 0 30px;
 }
 
 .actions {
@@ -439,7 +474,7 @@ nav {
 }
 
 /* =========================================================
-   CONTAINERS
+   CONTAINERS / PAGE HEADINGS
    ========================================================= */
 
 .container {
@@ -453,15 +488,36 @@ nav {
 .container h2 {
   font-size: clamp(32px, 5vw, 44px);
 
+  line-height: 1.1;
+
   letter-spacing: -1.5px;
 
-  margin-top: 0;
+  margin: 0 0 14px;
 
   color: var(--navy);
 }
 
 .container h3 {
   color: var(--navy);
+
+  margin-top: 0;
+}
+
+.container > h2 {
+  padding: 0 4px;
+}
+
+.container > p {
+  margin: 0 0 26px;
+  padding: 0 4px;
+
+  color: var(--muted);
+
+  line-height: 1.65;
+}
+
+.container > .grid {
+  margin-top: 26px;
 }
 
 section {
@@ -610,6 +666,7 @@ input,
 select,
 textarea {
   width: 100%;
+  max-width: 100%;
 
   border: 1px solid #d5dce1;
 
@@ -835,6 +892,9 @@ textarea:focus {
    ========================================================= */
 
 .table {
+  width: 100%;
+  max-width: 100%;
+
   background: white;
 
   border: 1px solid var(--border);
@@ -877,6 +937,98 @@ textarea:focus {
 
 .tr:last-child {
   border-bottom: 0;
+}
+
+/* =========================================================
+   ORDER TRACKING
+   ========================================================= */
+
+.order-tracking {
+  width: 100%;
+  max-width: 100%;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 10px;
+
+  margin-top: 16px;
+}
+
+.tracking-step {
+  width: 100%;
+  max-width: 100%;
+
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+
+  padding: 12px;
+
+  border: 1px solid var(--border);
+
+  border-radius: 12px;
+
+  background: #ffffff;
+
+  box-shadow: var(--shadow-sm);
+
+  overflow: hidden;
+}
+
+.tracking-icon {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 50%;
+
+  background: #e7e9eb;
+
+  color: #687584;
+
+  font-weight: 800;
+}
+
+.tracking-step.completed .tracking-icon {
+  background: #e4f4eb;
+  color: #17603a;
+}
+
+.tracking-step.next .tracking-icon {
+  background: #fff2cf;
+  color: #866300;
+}
+
+.tracking-info {
+  min-width: 0;
+
+  flex: 1;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+}
+
+.tracking-info strong {
+  color: var(--navy);
+
+  overflow-wrap: anywhere;
+}
+
+.tracking-info span {
+  color: var(--muted);
+
+  font-size: 12px;
+  font-weight: 700;
+
+  white-space: nowrap;
 }
 
 /* =========================================================
@@ -962,325 +1114,16 @@ textarea:focus {
 }
 
 /* =========================================================
-   MOBILE
-   ========================================================= */
-
-@media (max-width: 850px) {
-  nav {
-    height: auto;
-
-    min-height: 70px;
-
-    padding:
-      14px 4%;
-
-    /*
-      FIX:
-      Keep company name vertically centered
-      instead of aligning it to the top.
-    */
-    align-items: center;
-
-    gap: 12px;
-  }
-
-  .brand {
-    display: inline-flex;
-
-    align-items: center;
-
-    height: auto;
-
-    min-height: 42px;
-
-    font-size: 17px;
-
-    max-width: 190px;
-
-    line-height: 1.2;
-  }
-
-  .brand::after {
-    bottom: -5px;
-  }
-
-  .navlinks {
-    gap: 4px;
-
-    flex-wrap: wrap;
-
-    justify-content: flex-end;
-  }
-
-  .navlinks a:not(.button) {
-    padding: 7px 6px;
-
-    font-size: 12px;
-  }
-
-  .navlinks .button {
-    padding: 8px 11px;
-
-    font-size: 12px;
-  }
-
-  .hero {
-    min-height:
-      calc(100vh - 90px);
-
-    padding:
-      70px 5%;
-  }
-
-  .hero h1 {
-    letter-spacing: -2.5px;
-  }
-
-  .container {
-    width: 92%;
-
-    padding:
-      38px 0;
-  }
-}
-
-@media (max-width: 650px) {
-  .formgrid {
-    grid-template-columns: 1fr;
-  }
-
-  .formgrid .button {
-    grid-column: auto;
-  }
-
-  .grid {
-    grid-template-columns: 1fr;
-  }
-
-  .stats {
-    grid-template-columns:
-      repeat(2, 1fr);
-  }
-
-  .hero h1 {
-    font-size: 48px;
-  }
-
-  .hero p {
-    font-size: 17px;
-  }
-
-  .actions {
-    align-items: stretch;
-  }
-
-  .actions .button {
-    width: 100%;
-  }
-
-  .card {
-    padding: 18px;
-  }
-}
-
-@media (max-width: 430px) {
-  .stats {
-    grid-template-columns: 1fr;
-  }
-
-  .navlinks {
-    max-width: 190px;
-  }
-
-  .brand {
-    max-width: 145px;
-
-    min-height: 38px;
-
-    font-size: 16px;
-  }
-
-  .hero h1 {
-    font-size: 42px;
-  }
-
-  .eyebrow {
-    font-size: 9px;
-
-    letter-spacing: 1.6px;
-  }
-}
-
-/* =========================================================
-   ACCESSIBILITY
-   ========================================================= */
-
-:focus-visible {
-  outline: 3px solid
-    rgba(198, 161, 91, 0.5);
-
-  outline-offset: 3px;
-}
-
-/* =========================================================
-   RESPONSIVE MOBILE NAVIGATION
-   ========================================================= */
-
-.menu-toggle {
-  display: none;
-
-  border: 0;
-
-  background: transparent;
-
-  color: inherit;
-
-  font-size: 26px;
-
-  line-height: 1;
-
-  padding: 6px 8px;
-
-  cursor: pointer;
-}
-
-/* =========================================================
-   TABLET / MOBILE NAVIGATION
-   ========================================================= */
-
-@media (max-width: 850px) {
-  nav {
-    position: relative;
-
-    flex-wrap: wrap;
-
-    /*
-      Keep the entire top row vertically centered.
-    */
-    align-items: center;
-  }
-
-  .menu-toggle {
-    display: block;
-
-    margin-left: auto;
-  }
-
-  .navlinks {
-    display: none;
-
-    width: 100%;
-
-    flex-direction: column;
-
-    align-items: stretch;
-
-    gap: 6px;
-
-    padding-top: 10px;
-  }
-
-  .navlinks.mobile-open {
-    display: flex;
-  }
-
-  .navlinks a,
-  .navlinks .linkbtn {
-    width: 100%;
-
-    text-align: center;
-
-    box-sizing: border-box;
-  }
-
-  .navlinks a:not(.button) {
-    padding: 10px 12px;
-
-    font-size: 14px;
-  }
-
-  .navlinks .button {
-    padding: 10px 12px;
-
-    font-size: 14px;
-  }
-
-  .navlinks .linkbtn {
-    padding: 10px 12px;
-
-    font-size: 14px;
-  }
-}
-
-/* =========================================================
-   SMALLER PHONES
-   ========================================================= */
-
-@media (max-width: 430px) {
-  nav {
-    padding: 12px 4%;
-
-    align-items: center;
-  }
-
-  .brand {
-    display: inline-flex;
-
-    align-items: center;
-
-    max-width: 220px;
-
-    min-height: 38px;
-
-    font-size: 16px;
-  }
-
-  .menu-toggle {
-    font-size: 24px;
-  }
-
-  .navlinks {
-    padding-top: 8px;
-  }
-}
-/* =========================================================
-   RESPONSIVE MOBILE NAVIGATION
-   ========================================================= */
-
-.menu-toggle {
-  display: none;
-
-  border: 0;
-  background: transparent;
-
-  color: white;
-
-  font-size: 28px;
-  line-height: 1;
-
-  padding: 6px 8px;
-
-  cursor: pointer;
-}
-
-/* =========================================================
    TABLET
    ========================================================= */
 
 @media (max-width: 850px) {
   nav {
-    height: auto;
     min-height: 70px;
 
+    height: auto;
+
     padding: 12px 4%;
-
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
 
     gap: 12px;
 
@@ -1288,15 +1131,12 @@ textarea:focus {
   }
 
   .brand {
-    display: inline-flex;
-    align-items: center;
-
-    height: auto;
     min-height: 40px;
 
     max-width: calc(100% - 60px);
 
     font-size: 18px;
+
     line-height: 1.2;
 
     white-space: normal;
@@ -1320,6 +1160,7 @@ textarea:focus {
     width: 100%;
 
     flex-direction: column;
+
     align-items: stretch;
 
     gap: 7px;
@@ -1371,6 +1212,10 @@ textarea:focus {
 
     padding: 38px 0;
   }
+
+  .auth {
+    min-height: calc(100vh - 70px);
+  }
 }
 
 /* =========================================================
@@ -1419,107 +1264,44 @@ textarea:focus {
   .card {
     padding: 18px;
   }
-}
 
-/* =========================================================
-   ORDER TRACKING
-   ========================================================= */
+  .container {
+    width: 92%;
 
-.order-tracking {
-  width: 100%;
-  max-width: 100%;
+    padding: 34px 0;
+  }
 
-  display: flex;
-  flex-direction: column;
+  .container h2 {
+    font-size: 34px;
 
-  gap: 10px;
+    margin-bottom: 12px;
 
-  margin-top: 12px;
-}
+    padding: 0;
+  }
 
-.tracking-step {
-  width: 100%;
-  max-width: 100%;
+  .container > p {
+    padding: 0;
 
-  display: flex;
-  align-items: center;
+    margin-bottom: 22px;
+  }
 
-  gap: 12px;
+  .container > .grid {
+    margin-top: 22px;
+  }
 
-  padding: 12px;
+  .table {
+    width: 100%;
+    max-width: 100%;
 
-  border: 1px solid var(--border);
+    overflow-x: auto;
 
-  border-radius: 12px;
+    -webkit-overflow-scrolling: touch;
+  }
 
-  background: #ffffff;
+  .table .tr {
+    min-width: 620px;
+  }
 
-  box-shadow: var(--shadow-sm);
-
-  overflow: hidden;
-}
-
-.tracking-icon {
-  width: 34px;
-  min-width: 34px;
-  height: 34px;
-
-  display: grid;
-  place-items: center;
-
-  border-radius: 50%;
-
-  background: #e7e9eb;
-
-  color: #687584;
-
-  font-weight: 800;
-}
-
-.tracking-step.completed .tracking-icon {
-  background: #e4f4eb;
-
-  color: #17603a;
-}
-
-.tracking-step.next .tracking-icon {
-  background: #fff2cf;
-
-  color: #866300;
-}
-
-.tracking-info {
-  min-width: 0;
-
-  flex: 1;
-
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-
-  gap: 12px;
-}
-
-.tracking-info strong {
-  color: var(--navy);
-
-  overflow-wrap: anywhere;
-}
-
-.tracking-info span {
-  color: var(--muted);
-
-  font-size: 12px;
-  font-weight: 700;
-
-  white-space: nowrap;
-}
-
-/* =========================================================
-   MOBILE ORDER TRACKING
-   ========================================================= */
-
-@media (max-width: 650px) {
   .tracking-step {
     padding: 10px;
   }
@@ -1539,39 +1321,12 @@ textarea:focus {
   .tracking-info span {
     font-size: 11px;
   }
-}
 
-/* =========================================================
-   GLOBAL MOBILE WIDTH PROTECTION
-   ========================================================= */
-
-html,
-body,
-#root {
-  width: 100%;
-  max-width: 100%;
-
-  overflow-x: hidden;
-}
-
-img {
-  max-width: 100%;
-}
-
-.container,
-.hero,
-.auth {
-  width: 100%;
-  max-width: 100%;
-
-  overflow-x: hidden;
-}
-
-input,
-select,
-textarea,
-button {
-  max-width: 100%;
+  .tracking-icon {
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+  }
 }
 
 /* =========================================================
@@ -1608,6 +1363,14 @@ button {
   .stats {
     grid-template-columns: 1fr;
   }
+
+  .container h2 {
+    font-size: 31px;
+  }
+
+  .card {
+    padding: 16px;
+  }
 }
 
 /* =========================================================
@@ -1615,19 +1378,8 @@ button {
    ========================================================= */
 
 :focus-visible {
-  outline: 3px solid rgba(198, 161, 91, 0.5);
+  outline: 3px solid
+    rgba(198, 161, 91, 0.5);
 
   outline-offset: 3px;
-}
-
-@media (max-width: 650px) {
-  .table {
-    width: 100%;
-    max-width: 100%;
-    overflow-x: auto;
-  }
-
-  .table .tr {
-    min-width: 620px;
-  }
 }
