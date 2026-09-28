@@ -1,4 +1,3 @@
-
 package com.chromacore.portal.controller;
 
 import com.chromacore.portal.dto.ProductDtos.*;
@@ -250,11 +249,6 @@ public class ProductController {
     // =========================================================
     // SHADES
     // =========================================================
-
-    @GetMapping("/shades/public")
-    public List<ShadeCard> publicShades() {
-        return shades.findByActiveTrueOrderByShadeNameAsc();
-    }
 
     @GetMapping("/admin/shades")
     public List<ShadeCard> adminShades() {
