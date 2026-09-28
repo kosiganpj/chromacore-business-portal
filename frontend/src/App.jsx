@@ -1100,6 +1100,8 @@ function Customer() {
   const [invoices, setInvoices] = useState([])
   const [error, setError] = useState('')
 
+  const navigate = useNavigate()
+
   useEffect(() => {
     let active = true
 
@@ -1138,6 +1140,63 @@ function Customer() {
       active = false
     }
   }, [])
+
+  /*
+   * FIX:
+   * Normal <a href="..."> does not send the JWT Authorization
+   * header. The invoice PDF endpoint is protected by Spring
+   * Security, so direct browser navigation returns HTTP 401.
+   *
+   * This function downloads the PDF using the JWT and then
+   * opens the returned Blob in a new browser tab.
+   */
+  async function openInvoicePdf(invoiceId) {
+    try {
+      const token = localStorage.getItem('cc_token')
+
+      if (!token) {
+        alert('Please login again.')
+        navigate('/login')
+        return
+      }
+
+      const response = await fetch(
+        `https://chromacore-business-portal-1.onrender.com/api/customer/invoices/${invoiceId}/pdf`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error(
+          `PDF request failed: ${response.status}`
+        )
+      }
+
+      const blob = await response.blob()
+
+      const url =
+        window.URL.createObjectURL(blob)
+
+      window.open(url, '_blank')
+
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url)
+      }, 60000)
+    } catch (e) {
+      console.error(
+        'Invoice PDF error:',
+        e
+      )
+
+      alert(
+        'Failed to open invoice PDF.'
+      )
+    }
+  }
 
   const welcomeName =
     me?.companyName ||
@@ -1341,13 +1400,15 @@ function Customer() {
                 ).toFixed(2)}
               </span>
 
-              <a
-                href={`https://chromacore-business-portal-1.onrender.com/api/customer/invoices/${i.id}/pdf`}
-                target="_blank"
-                rel="noreferrer"
+              <button
+                type="button"
+                className="linkbtn"
+                onClick={() =>
+                  openInvoicePdf(i.id)
+                }
               >
                 PDF
-              </a>
+              </button>
             </div>
           ))
         )}
@@ -1411,10 +1472,6 @@ function Admin() {
 
   const [savingProduct, setSavingProduct] =
     useState(false)
-
-  /* ==========================================================
-     SHADE CARD STATE
-     ========================================================== */
 
   const [newShade, setNewShade] = useState({
     shadeCode: '',
@@ -1550,10 +1607,6 @@ function Admin() {
       [k]: v
     })
   }
-
-  /* ==========================================================
-     PRODUCT FUNCTIONS
-     ========================================================== */
 
   async function addProduct(e) {
     e.preventDefault()
@@ -1841,13 +1894,6 @@ function Admin() {
     }
   }
 
-  /* ==========================================================
-     SHADE CARD FUNCTIONS
-     IMPORTANT:
-     ADMIN API = /admin/shades
-     PUBLIC API = /shades/public
-     ========================================================== */
-
   function setShadeField(
     key,
     value
@@ -2117,10 +2163,6 @@ function Admin() {
         </div>
       </div>
 
-      {/* ======================================================
-          ADD PRODUCT
-          ====================================================== */}
-
       <section>
         <h3>Add Product</h3>
 
@@ -2210,10 +2252,6 @@ function Admin() {
           </button>
         </form>
       </section>
-
-      {/* ======================================================
-          PRODUCT & STOCK MANAGEMENT
-          ====================================================== */}
 
       <section>
         <h3>
@@ -2588,10 +2626,6 @@ function Admin() {
         </div>
       </section>
 
-      {/* ======================================================
-          SHADE CARD MANAGEMENT
-          ====================================================== */}
-
       <section>
         <h3>Shade Card Management</h3>
 
@@ -2879,10 +2913,6 @@ function Admin() {
         </div>
       </section>
 
-      {/* ======================================================
-          ORDERS
-          ====================================================== */}
-
       <section>
         <h3>Orders</h3>
 
@@ -2960,10 +2990,6 @@ function Admin() {
           ))}
         </div>
       </section>
-
-      {/* ======================================================
-          CUSTOMERS
-          ====================================================== */}
 
       <section>
         <h3>Customers</h3>
