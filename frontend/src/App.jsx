@@ -21,10 +21,18 @@ function Nav() {
       </Link>
 
       <div className="navlinks">
+        {/* Always available */}
+        <Link to="/">Home</Link>
+
         <Link to="/products">Products</Link>
+
         <Link to="/shades">Shade Cards</Link>
 
-        {!token && <Link to="/login">Login</Link>}
+        {!token && (
+          <Link to="/login">
+            Login
+          </Link>
+        )}
 
         {!token && (
           <Link className="button" to="/register">
@@ -33,15 +41,23 @@ function Nav() {
         )}
 
         {token && role === 'CUSTOMER' && (
-          <Link to="/customer">Dashboard</Link>
+          <Link to="/customer">
+            Dashboard
+          </Link>
         )}
 
         {token && role === 'ADMIN' && (
-          <Link to="/admin">Admin</Link>
+          <Link to="/admin">
+            Admin
+          </Link>
         )}
 
         {token && (
-          <button className="linkbtn" onClick={logout}>
+          <button
+            type="button"
+            className="linkbtn"
+            onClick={logout}
+          >
             Logout
           </button>
         )}
@@ -61,8 +77,9 @@ function Home() {
         <h1>Sree Sivasakthi Traders</h1>
 
         <p>
-          Digital product catalogue, shade cards, customer orders,
-          invoices and order tracking in one place.
+          Digital product catalogue, shade cards,
+          customer orders, invoices and order
+          tracking in one place.
         </p>
 
         <div className="actions">
@@ -70,7 +87,10 @@ function Home() {
             Explore Products
           </Link>
 
-          <Link className="button secondary" to="/register">
+          <Link
+            className="button secondary"
+            to="/register"
+          >
             Create Customer Account
           </Link>
         </div>
@@ -727,6 +747,8 @@ function Products() {
                   <img
                     src={p.imageUrl}
                     alt={p.name}
+                    loading="lazy"
+                    decoding="async"
                   />
                 ) : (
                   <span>
@@ -858,6 +880,8 @@ function Shades() {
                 className="shadeimg"
                 src={s.imageUrl}
                 alt={s.shadeName}
+                loading="lazy"
+                decoding="async"
               />
             ) : (
               <div className="shadeplaceholder">
@@ -2841,6 +2865,8 @@ function Admin() {
                   className="shadeimg"
                   src={shade.imageUrl}
                   alt={shade.shadeName}
+                  loading="lazy"
+                  decoding="async"
                 />
               ) : (
                 <div className="shadeplaceholder">
